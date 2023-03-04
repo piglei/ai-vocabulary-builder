@@ -66,11 +66,14 @@ def write_new_one(text: str):
             progress.update(task_id, total=1, advance=1)
             return
 
-    table = Table(title="Translation Result", show_header=False)
-    table.add_row("原文", word.orig_text)
-    table.add_row("中文翻译", word.translated_text)
-    table.add_row("生词（自动提取）", word.word)
-    table.add_row("释义", word.word_meaning)
+    table = Table(title="翻译结果", show_header=False)
+    table.add_column("title")
+    table.add_column("detail", overflow='fold')
+    table.add_row("[bold]原文[/bold]", f'[grey42]{word.orig_text}[grey42]')
+    table.add_row("[bold]中文翻译[/bold]", word.translated_text)
+    table.add_row("[bold]生词（自动提取）[/bold]", word.word)
+    table.add_row("[bold]释义[/bold]", word.word_meaning)
+    table.add_row("[bold]发音[/bold]", word.pronunciation)
 
     console.print(table)
 
@@ -83,7 +86,7 @@ def write_new_one(text: str):
         f'Word [bold]"{word.word}"[/bold] has been added to your vocabulary book, well done!', style='grey42'
     )
     console.print(f'Your vocabulary book now contains [bold]{builder.words_count()}[/bold] words.', style='grey42')
-    console.print(f'Open file to {builder.file_path} review.', style='grey42')
+    console.print(f'Open file {builder.file_path} to review.', style='grey42')
 
 
 class VocBuilderCSVFile:
