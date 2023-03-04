@@ -212,25 +212,6 @@ def parse_openai_reply(reply_text: str, orig_text: str) -> WordSample:
 # The prompt being used to make word
 prompt_tmpl = dedent(
     '''
-I will give you a sentence and a list of words called "known-words" which is splitted
-by ",", please find out the most uncommon word in the sentence(the word must not in "known-words"),
-get the simplified Chinese meaning of that word, the pronunciation of that word
-and translated the whole sentence into simplified Chinese.
-
-Your reply should use the format
-"{{word}}__{{pronunciation}}__{{chinese_meaning_of_word}}__{{translated_sentence}}"
-with no extra content, also contains no brackets and line breaks.
-
-known-words: {known_words}
-
-The sentence is:
-
-{text}
-'''
-)
-
-prompt_tmpl = dedent(
-    '''
 I will give you a sentence and a list of words called "known-words" which is divided
 by ",", please find out the most uncommon word in the sentence(the word must not in "known-words"),
 get the simplified Chinese meaning of that word, the pronunciation of that word
