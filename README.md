@@ -12,6 +12,15 @@ aivoc 尝试着使用 ChatGPT 的能力，将生词本的维护成本降到最�
 - 由 AI 提取出的生词及释义
 - **一个免维护的全自动生词本表格**
 
+<img width="654" alt="image" src="https://user-images.githubusercontent.com/731266/222906122-5fa8d1fa-0f9f-4697-a227-bbcd7edc72fe.png">
+
+↑ 交互式使用界面
+
+<img width="931" alt="image" src="https://user-images.githubusercontent.com/731266/222906216-3ae12bfd-8404-4cc4-b50c-1ff47d8d1e61.png">
+
+↑ 使用 numbers 打开生词库表格（使用 CSV 纯文本格式，方便二次处理）
+
+
 ## 快速开始
 
 使用 pip 来安装本工具：
