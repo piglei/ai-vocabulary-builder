@@ -1,7 +1,7 @@
 import pytest
 
 from voc_builder.models import WordSample
-from voc_builder.openai import parse_openai_reply
+from voc_builder.openai_svc import parse_openai_reply
 
 
 @pytest.mark.parametrize(

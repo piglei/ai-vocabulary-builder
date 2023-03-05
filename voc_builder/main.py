@@ -18,7 +18,7 @@ from rich.table import Table
 
 from voc_builder.interactive import COMMAND_NO, handle_command_no
 from voc_builder.models import WordSample
-from voc_builder.openai import parse_openai_reply, query_openai
+from voc_builder.openai_svc import parse_openai_reply, query_openai
 from voc_builder.store import MasteredWordStore
 from voc_builder.utils import tokenize_text
 
@@ -246,9 +246,7 @@ def get_mastered_word_store() -> MasteredWordStore:
 @click.command()
 @click.option('--api-key', envvar='OPENAI_API_KEY', required=True, help='Your OpenAI API key')
 @click.option('--text', type=str, help='Text to be translated, interactive mode also supported')
-@click.option(
-    '--log-level', type=str, default='INFO', help='Log level, change it to DEBUG to see more logs'
-)
+@click.option('--log-level', type=str, default='INFO', help='Log level, change it to DEBUG to see more logs')
 def main(api_key: str, text: str, log_level: str):
     # Set logging level
     logger.setLevel(getattr(logging, log_level.upper()))
