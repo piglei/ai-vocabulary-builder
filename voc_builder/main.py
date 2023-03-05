@@ -7,12 +7,12 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from textwrap import dedent
-from typing import List, TextIO
+from typing import Dict, List, TextIO
 
 import click
 import openai
-from rich.panel import Panel
 from rich.console import Console
+from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt
 from rich.table import Table
@@ -83,9 +83,13 @@ def write_new_one(text: str):
 
     builder.append_word(word)
     console.print(
-        f'Word [bold]"{word.word}"[/bold] has been added to your vocabulary book, well done!', style='grey42'
+        f'Word [bold]"{word.word}"[/bold] has been added to your vocabulary book, well done!',
+        style='grey42',
     )
-    console.print(f'Your vocabulary book now contains [bold]{builder.words_count()}[/bold] words.', style='grey42')
+    console.print(
+        f'Your vocabulary book now contains [bold]{builder.words_count()}[/bold] words.',
+        style='grey42',
+    )
     console.print(f'Open file {builder.file_path} to review.', style='grey42')
 
 
@@ -193,23 +197,40 @@ def parse_openai_reply(reply_text: str, orig_text: str) -> WordSample:
     :return: WordSample object
     :raise: ValueError when the given reply text can not be parsed
     """
-    d = {'word': None, 'meaning': None, 'pronunciation': None, 'translated': None}
+    # Get the key value pairs from text first
+    kv_pairs: Dict[str, str] = {}
     for line in reply_text.split('\n'):
         if ':' in line:
             key, value = line.split(':', 1)
-            d[key.strip(' -')] = value.strip()
+            kv_pairs[key.strip(' -').lower()] = value.strip()
 
-    if not all(d.values()):
+    # The reply may use non-standard keys sometimes, define a list of possible keys to handle
+    # these situations.
+    #   {field_name}: {list_of_possible_keys}
+    possible_field_index: Dict[str, List[str]] = {
+        'word': ['word', 'uncommon word'],
+        'word_meaning': ['meaning'],
+        'pronunciation': ['pronunciation'],
+        'translated_text': ['translated'],
+    }
+    required_fields = set(possible_field_index.keys())
+
+    # Build a fields dict for making the WordSample object
+    fields: Dict[str, str] = {}
+    for field, keys in possible_field_index.items():
+        for k in keys:
+            field_value = kv_pairs.get(k)
+            if field_value:
+                fields[field] = field_value
+                break
+
+    # All fields must be provided
+    if set(fields.keys()) != required_fields:
         raise ValueError('Reply text "%s" is invalid' % reply_text)
 
-    return WordSample(
-        # The word was surrounded by {} sometimes
-        word=d['word'].strip('{}').lower(),
-        word_meaning=d['meaning'],
-        pronunciation=d['pronunciation'],
-        orig_text=orig_text,
-        translated_text=d['translated'],
-    )
+    # The word was surrounded by {} sometimes, remove
+    fields['word'] = fields['word'].strip('{}').lower()
+    return WordSample(orig_text=orig_text, **fields)
 
 
 # The prompt being used to make word
@@ -290,7 +311,6 @@ def main(api_key: str, text: str, log_level: str):
     while True:
         text = Prompt.ask('[blue]>[/blue] Enter text').strip()
         if not text.strip():
-
             continue
         write_new_one(text.strip())
 

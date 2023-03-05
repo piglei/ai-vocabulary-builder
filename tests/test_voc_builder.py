@@ -1,6 +1,8 @@
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
+
 from voc_builder.main import VocBuilderCSVFile, WordSample, parse_openai_reply
 
 
@@ -21,7 +23,7 @@ class TestVocBuilderCSVFile:
     def test_find_known_words(self, w_sample_world):
         builder = VocBuilderCSVFile(Path(tempfile.mktemp()))
         builder.append_word(w_sample_world)
-        builder.find_known_words('Hello, world') == ['world']
+        assert builder.find_known_words('Hello, world') == ['world']
 
     def test_repeated_calls(self, w_sample_world):
         p = Path(tempfile.mktemp())
@@ -48,6 +50,31 @@ class TestVocBuilderCSVFile:
 @pytest.mark.parametrize(
     'orig_text,input,expected',
     [
+        # A standard reply
+        (
+            'Hello, world.',
+            'word: world\npronunciation: wɔːld\nmeaning: 世界\ntranslated: 你好，世界。',
+            WordSample(
+                word='world',
+                pronunciation='wɔːld',
+                word_meaning='世界',
+                orig_text='Hello, world.',
+                translated_text='你好，世界。',
+            ),
+        ),
+        # A reply using non-standard key name
+        (
+            'Hello, world.',
+            'Uncommon word: world\npronunciation: wɔːld\nmeaning: 世界\ntranslated: 你好，世界。',
+            WordSample(
+                word='world',
+                pronunciation='wɔːld',
+                word_meaning='世界',
+                orig_text='Hello, world.',
+                translated_text='你好，世界。',
+            ),
+        ),
+        # A reply which has extra content in the beginning and the end
         (
             'Hello, world.',
             'foobar\n\nword: world\npronunciation: wɔːld\nmeaning: 世界\ntranslated: 你好，世界。\nother info',
