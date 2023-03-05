@@ -2,11 +2,11 @@
 import csv
 import datetime
 import logging
+import os
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict, List, Set, TextIO
+from typing import List, Set, TextIO
 
 import click
 import openai
@@ -16,6 +16,9 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt
 from rich.table import Table
 
+from voc_builder.interactive import COMMAND_NO, handle_command_no
+from voc_builder.models import WordSample
+from voc_builder.openai import parse_openai_reply, query_openai
 from voc_builder.store import MasteredWordStore
 from voc_builder.utils import tokenize_text
 
@@ -28,7 +31,7 @@ logger = logging.getLogger()
 # The default path for storing the vocabulary book
 DEFAULT_CSV_FILE_PATH = Path('~/aivoc_builder.csv').expanduser()
 # The default path for storing db files, testings should patch this variable
-DEFAULT_DB_PATH = Path('~/aivoc_db').expanduser()
+DEFAULT_DB_PATH = Path('~/.aivoc_db').expanduser()
 
 console = Console()
 
@@ -37,27 +40,8 @@ class VocBuilderError(Exception):
     """Base exception type for aivoc."""
 
 
-@dataclass
-class WordSample:
-    """A word sample which is ready to be added into a vocabulary book
-
-    :param word: The word itself, for example: "world"
-    :param word_meaning: The Chinese meaning of the word
-    :param pronunciation: The pronunciation of the word, "/wɔrld/"
-    :param orig_text: The original text
-    :param translated_text: The translated text
-    """
-
-    word: str
-    word_meaning: str
-    pronunciation: str
-    orig_text: str
-    translated_text: str
-
-    @classmethod
-    def make_empty(cls, word: str) -> 'WordSample':
-        """Make an empty object which use "word" field only, other fields are set to empty."""
-        return cls(word, '', '', '', '')
+class WordInvalidForAdding(VocBuilderError):
+    """Raised when a word sample is invalid for adding into vocabulary book"""
 
 
 def write_new_one(text: str, csv_book_path: Path = DEFAULT_CSV_FILE_PATH):
@@ -84,10 +68,10 @@ def write_new_one(text: str, csv_book_path: Path = DEFAULT_CSV_FILE_PATH):
 
     console.print(format_as_console_table(word))
 
-    if builder.is_duplicated(word):
-        console.print(
-            f'Word "{word.word}" is already in your vocabulary book, skip.', style='grey42'
-        )
+    try:
+        validate_result_word(word, text, builder)
+    except WordInvalidForAdding as e:
+        console.print(f'Unable to add "{word.word}", reason: {e}', style='grey42')
         return
 
     builder.append_word(word)
@@ -98,6 +82,16 @@ def write_new_one(text: str, csv_book_path: Path = DEFAULT_CSV_FILE_PATH):
         ),
         style='grey42',
     )
+
+
+def validate_result_word(word: WordSample, orig_text: str, builder: 'VocBuilderCSVFile'):
+    """Check if a result word is valid before it can be put into vocabulary book"""
+    if builder.is_duplicated(word):
+        raise WordInvalidForAdding('already in your vocabulary book')
+    if get_mastered_word_store().exists(word.word):
+        raise WordInvalidForAdding('already mastered')
+    if word.word not in orig_text.lower():
+        raise WordInvalidForAdding('not in the original text')
 
 
 def format_as_console_table(word: WordSample) -> Table:
@@ -183,6 +177,26 @@ class VocBuilderCSVFile:
         all_words = {w.word for w in self.read_all()}
         return words & all_words
 
+    def remove_words(self, words: Set[str]):
+        """Remove words from current records
+
+        :param words: Words need to be removed.
+        """
+        # INFO: CSV does not support in-place update, so a fully update is required
+        new_path = Path(str(self.file_path) + '.new')
+        if new_path.exists():
+            new_path.unlink()
+
+        new_file = VocBuilderCSVFile(new_path)
+        for w in self.read_all():
+            # Skip words
+            if w.word in words:
+                continue
+            new_file.append_word(w)
+
+        # Replace current file with new file
+        os.rename(new_path, self.file_path)
+
     def _get_reader(self, fp: TextIO):
         """Get the CSV reader obj"""
         return csv.DictReader(fp, delimiter=",", quoting=csv.QUOTE_MINIMAL)
@@ -209,92 +223,6 @@ def get_word_and_translation(text: str, known_words: Set[str]) -> WordSample:
         return parse_openai_reply(reply, text)
     except ValueError as e:
         raise VocBuilderError(e)
-
-
-def parse_openai_reply(reply_text: str, orig_text: str) -> WordSample:
-    """Parse the OpenAI reply into WorkSample
-
-    :param reply_text: Formatted text
-    :param orig_text: The original text which needs translation
-    :return: WordSample object
-    :raise: ValueError when the given reply text can not be parsed
-    """
-    # Get the key value pairs from text first
-    kv_pairs: Dict[str, str] = {}
-    for line in reply_text.split('\n'):
-        if ':' in line:
-            key, value = line.split(':', 1)
-            kv_pairs[key.strip(' -').lower()] = value.strip()
-
-    # The reply may use non-standard keys sometimes, define a list of possible keys to handle
-    # these situations.
-    #   {field_name}: {list_of_possible_keys}
-    possible_field_index: Dict[str, List[str]] = {
-        'word': ['word', 'uncommon word'],
-        'word_meaning': ['meaning'],
-        'pronunciation': ['pronunciation'],
-        'translated_text': ['translated'],
-    }
-    required_fields = set(possible_field_index.keys())
-
-    # Build a fields dict for making the WordSample object
-    fields: Dict[str, str] = {}
-    for field, keys in possible_field_index.items():
-        for k in keys:
-            field_value = kv_pairs.get(k)
-            if field_value:
-                fields[field] = field_value
-                break
-
-    # All fields must be provided
-    if set(fields.keys()) != required_fields:
-        raise ValueError('Reply text "%s" is invalid' % reply_text)
-
-    # The word was surrounded by {} sometimes, remove
-    fields['word'] = fields['word'].strip('{}').lower()
-    return WordSample(orig_text=orig_text, **fields)
-
-
-# The prompt being used to make word
-prompt_tmpl = dedent(
-    '''
-I will give you a sentence and a list of words called "known-words" which is divided
-by ",", please find out the most uncommon word in the sentence(the word must not in "known-words"),
-get the simplified Chinese meaning of that word, the pronunciation of that word
-and translate the whole sentence into simplified Chinese.
-
-Your answer should be separated into 4 different lines, each line's content is as below:
-
-- word: {{word}}
-- pronunciation: {{pronunciation}}
-- meaning: {{chinese_meaning_of_word}}
-- translated: {{translated_sentence}}
-
-The answer should have no extra content.
-
-known-words: {known_words}
-
-The sentence is:
-
-{text}
-'''
-)
-
-
-def query_openai(text: str, known_words: Set[str]) -> str:
-    """Query OpenAI to get the translation results.
-
-    :return: Well formatted string contains word and meaning
-    """
-    content = prompt_tmpl.format(text=text, known_words=','.join(known_words))
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "user", "content": content},
-        ],
-    )
-    logger.debug('Completion API returns: %s', completion)
-    return completion.choices[0].message.content.strip()
 
 
 # Database related functions
@@ -354,6 +282,11 @@ def main(api_key: str, text: str, log_level: str):
         text = Prompt.ask('[blue]>[/blue] Enter text').strip()
         if not text.strip():
             continue
+        if text == COMMAND_NO:
+            handle_command_no()
+            console.print('Under construction')
+            continue
+
         write_new_one(text.strip())
 
 

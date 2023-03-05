@@ -14,3 +14,16 @@ class TestMasteredWordsStore:
         mastered_words_s.add('program')
         mastered_words_s.add('python')
         assert set(mastered_words_s.all()) == {'python', 'program'}
+
+    def test_exists(self, tmp_path):
+        mastered_words_s = MasteredWordStore(tmp_path / 'foo.json')
+        assert mastered_words_s.exists('program') is False
+        mastered_words_s.add('program')
+        assert mastered_words_s.exists('program') is True
+
+    def test_remove(self, tmp_path):
+        mastered_words_s = MasteredWordStore(tmp_path / 'foo.json')
+        mastered_words_s.add('program')
+        assert mastered_words_s.exists('program') is True
+        mastered_words_s.remove('program')
+        assert mastered_words_s.exists('program') is False

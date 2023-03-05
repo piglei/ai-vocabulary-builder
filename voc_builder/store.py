@@ -19,12 +19,7 @@ class MasteredWordStore:
 
         :param words: a list of lower cased word.
         """
-        items = set()
-        MWord = Query()
-        for word in words:
-            if self._db.search(MWord.word == word):
-                items.add(word)
-        return items
+        return {word for word in words if self.exists(word)}
 
     def all(self) -> List[str]:
         """Return all mastered words
@@ -40,3 +35,19 @@ class MasteredWordStore:
         """
         MWord = Query()
         return self._db.upsert({'word': word}, MWord.word == word)
+
+    def remove(self, word: str):
+        """Remove a word
+
+        :param word: Lower cased word.
+        """
+        MWord = Query()
+        self._db.remove(MWord.word == word)
+
+    def exists(self, word: str):
+        """Check if a word exists in current db
+
+        :param word: Lower cased word.
+        """
+        MWord = Query()
+        return bool(self._db.search(MWord.word == word))
