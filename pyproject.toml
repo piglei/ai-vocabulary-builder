@@ -15,9 +15,6 @@ click = "^8.0.0"
 openai = "^0.27.0"
 rich = "^13.0.0"
 
-[tool.poetry.dev-dependencies]
-pytest = "==7.2.2"
-
 [tool.poetry.scripts]
 aivoc = "voc_builder.main:main"
 
@@ -26,6 +23,42 @@ default = true
 name = "tencent-mirror"
 url = "https://mirrors.tencent.com/pypi/simple/"
 
+
+[tool.poetry.group.dev.dependencies]
+toml = "^0.10.2"
+pytest = "==7.2.2"
+isort = "^4.0.0"
+black = "==23.1.0"
+flake8 = "^5.0.0"
+flake8-bugbear = "==23.1.20"
+flake8-comprehensions = "==3.10.1"
+flake8-pie = "==0.16.0"
+mypy = "==1.0.0"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+profile = "black"
+line_length = 99
+sections = "FUTURE,STDLIB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
+skip = [".git", "__pycache__"]
+
+[tool.black]
+skip-string-normalization = 'true'
+line-length = 99
+exclude = '''
+/(
+  \.git
+  | __pycache__
+)/
+'''
+target-version = ['py37']
+
+[tool.mypy]
+ignore_missing_imports = true
+show_error_codes = true
+check_untyped_defs = true
+namespace_packages = true
+exclude = []

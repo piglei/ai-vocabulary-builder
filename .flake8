@@ -1,0 +1,26 @@
+[flake8]
+format = pylint
+extend-ignore = 
+    # 禁用原因，与 black 格式化后的样式冲突
+    E203,
+    # 禁用原因，允许使用 import *（仅在个别情况下配合 __all__ 使用，不建议大量用）
+    F403,F405,
+    # 禁用原因，版权头信息使用多行字符串引起，如批量修改成普通 # 号注释后可解
+    E402,
+    # flake8-comprehensions: 禁用 C408 后，允许使用 dict() 来构建字典对象
+    C408,
+    # flake8-bugbear: 禁用 B009,B010 后，允许对常量属性名使用 getattr/setattr
+    B009,B010,
+    # flake8-pie: 忽略多项普适性不佳的规则，比如：函数返回前定义临时变量、模糊的异常捕获、
+    #   非必要的 class 定义、可使用 bool() 替换的条件分支、日志未使用 %s 格式等
+    PIE781,PIE786,PIE798,PIE801,PIE803,
+    # flake8-pie: 忽略与 celery 任务相关的规则
+    PIE783,PIE784,PIE785,
+max-line-length = 119
+max-complexity = 12
+show_source = true
+statistics = true
+count = true
+exclude =
+    .git,
+    __pycache__
