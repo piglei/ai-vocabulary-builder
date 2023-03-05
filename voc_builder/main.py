@@ -2,12 +2,11 @@
 import csv
 import datetime
 import logging
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict, List, TextIO
+from typing import Dict, List, Set, TextIO
 
 import click
 import openai
@@ -17,6 +16,9 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt
 from rich.table import Table
 
+from voc_builder.store import MasteredWordStore
+from voc_builder.utils import tokenize_text
+
 # Set logging to stdout by default
 log_format = "%(asctime)s - %(name)s - [%(levelname)s]:  %(message)s"
 logging.basicConfig(format=log_format, level=logging.DEBUG)
@@ -25,6 +27,8 @@ logger = logging.getLogger()
 
 # The default path for storing the vocabulary book
 DEFAULT_CSV_FILE_PATH = Path('~/aivoc_builder.csv').expanduser()
+# The default path for storing db files, testings should patch this variable
+DEFAULT_DB_PATH = Path('~/aivoc_db').expanduser()
 
 console = Console()
 
@@ -50,12 +54,24 @@ class WordSample:
     orig_text: str
     translated_text: str
 
+    @classmethod
+    def make_empty(cls, word: str) -> 'WordSample':
+        """Make an empty object which use "word" field only, other fields are set to empty."""
+        return cls(word, '', '', '', '')
 
-def write_new_one(text: str):
-    """Write a new word to the vocabulary book"""
-    builder = VocBuilderCSVFile(DEFAULT_CSV_FILE_PATH)
+
+def write_new_one(text: str, csv_book_path: Path = DEFAULT_CSV_FILE_PATH):
+    """Write a new word to the vocabulary book
+
+    :param csv_book_path: The path of vocabulary book
+    """
+    builder = VocBuilderCSVFile(csv_book_path)
+    mastered_word_s = get_mastered_word_store()
+
     progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API"))
-    known_words = builder.find_known_words(text)
+    orig_words = tokenize_text(text)
+    # Words already in vocabulary book and marked as mastered are treated as "known"
+    known_words = builder.find_known_words(orig_words) | mastered_word_s.filter(orig_words)
     with progress:
         task_id = progress.add_task("get", start=False)
         try:
@@ -66,6 +82,26 @@ def write_new_one(text: str):
             progress.update(task_id, total=1, advance=1)
             return
 
+    console.print(format_as_console_table(word))
+
+    if builder.is_duplicated(word):
+        console.print(
+            f'Word "{word.word}" is already in your vocabulary book, skip.', style='grey42'
+        )
+        return
+
+    builder.append_word(word)
+    console.print(
+        (
+            f'[bold]"{word.word}"[/bold] was added to your vocabulary book ([bold]{builder.words_count()}[/bold] '
+            'in total), well done!'
+        ),
+        style='grey42',
+    )
+
+
+def format_as_console_table(word: WordSample) -> Table:
+    """Format a word sample as rich table"""
     table = Table(title="翻译结果", show_header=False)
     table.add_column("title")
     table.add_column("detail", overflow='fold')
@@ -74,23 +110,7 @@ def write_new_one(text: str):
     table.add_row("[bold]生词（自动提取）[/bold]", word.word)
     table.add_row("[bold]释义[/bold]", word.word_meaning)
     table.add_row("[bold]发音[/bold]", word.pronunciation)
-
-    console.print(table)
-
-    if builder.is_duplicated(word):
-        console.print(f'Word "{word.word}" is already in your vocabulary book, skip.', style='grey42')
-        return
-
-    builder.append_word(word)
-    console.print(
-        f'Word [bold]"{word.word}"[/bold] has been added to your vocabulary book, well done!',
-        style='grey42',
-    )
-    console.print(
-        f'Your vocabulary book now contains [bold]{builder.words_count()}[/bold] words.',
-        style='grey42',
-    )
-    console.print(f'Open file {builder.file_path} to review.', style='grey42')
+    return table
 
 
 class VocBuilderCSVFile:
@@ -155,11 +175,13 @@ class VocBuilderCSVFile:
                 words.append(w)
         return words
 
-    def find_known_words(self, text: str) -> List[str]:
-        """Find out words already in record"""
-        words = {s.group().lower() for s in re.finditer(r'[a-zA-Z]+', text)}
+    def find_known_words(self, words: Set[str]) -> Set[str]:
+        """Find out words already in record
+
+        :param words: The source words which are tokenized from user text.
+        """
         all_words = {w.word for w in self.read_all()}
-        return list(words & all_words)
+        return words & all_words
 
     def _get_reader(self, fp: TextIO):
         """Get the CSV reader obj"""
@@ -170,7 +192,7 @@ class VocBuilderCSVFile:
         return csv.writer(fp, delimiter=",", quoting=csv.QUOTE_MINIMAL)
 
 
-def get_word_and_translation(text: str, known_words: List[str]) -> WordSample:
+def get_word_and_translation(text: str, known_words: Set[str]) -> WordSample:
     """Get the most uncommon word in the given text, the result also include other
     information such as meaning of the word and etc.
 
@@ -259,7 +281,7 @@ The sentence is:
 )
 
 
-def query_openai(text: str, known_words: List[str]) -> str:
+def query_openai(text: str, known_words: Set[str]) -> str:
     """Query OpenAI to get the translation results.
 
     :return: Well formatted string contains word and meaning
@@ -275,10 +297,30 @@ def query_openai(text: str, known_words: List[str]) -> str:
     return completion.choices[0].message.content.strip()
 
 
+# Database related functions
+
+_db_initialized = False
+
+
+def initialized_db():
+    """Set up databases, make global objects"""
+    global _db_initialized
+    _db_initialized = True
+    Path(DEFAULT_DB_PATH).mkdir(exist_ok=True)
+
+
+def get_mastered_word_store() -> MasteredWordStore:
+    if not _db_initialized:
+        initialized_db()
+    return MasteredWordStore(Path(DEFAULT_DB_PATH) / 'mastered_word.json')
+
+
 @click.command()
 @click.option('--api-key', envvar='OPENAI_API_KEY', required=True, help='Your OpenAI API key')
 @click.option('--text', type=str, help='Text to be translated, interactive mode also supported')
-@click.option('--log-level', type=str, default='INFO', help='Log level, change it to DEBUG to see more logs')
+@click.option(
+    '--log-level', type=str, default='INFO', help='Log level, change it to DEBUG to see more logs'
+)
 def main(api_key: str, text: str, log_level: str):
     # Set logging level
     logger.setLevel(getattr(logging, log_level.upper()))
