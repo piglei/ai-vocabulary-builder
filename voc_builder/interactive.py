@@ -1,11 +1,11 @@
 """Functions relative with the interactive REPL"""
+import logging
+import traceback
 from dataclasses import dataclass
 from textwrap import dedent
 from typing import ClassVar, Optional
-import traceback
 
 import questionary
-import logging
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -16,7 +16,7 @@ from voc_builder import config
 from voc_builder.builder import get_csv_builder
 from voc_builder.exceptions import VocBuilderError, WordInvalidForAdding
 from voc_builder.models import WordChoice, WordSample
-from voc_builder.openai_svc import get_word_choices, get_word_and_translation
+from voc_builder.openai_svc import get_word_and_translation, get_word_choices
 from voc_builder.store import get_mastered_word_store
 from voc_builder.utils import tokenize_text
 
@@ -86,7 +86,9 @@ def handle_cmd_no():
     """
     ret = LastActionResult.trans_result
     if not (ret and ret.stored_to_voc_book):
-        console.print('The "no" command was used to remove the last added word and select the word manually.')
+        console.print(
+            'The "no" command was used to remove the last added word and select the word manually.'
+        )
         console.print('Can\'t get the last added word, please start a new translation.')
         return
 
