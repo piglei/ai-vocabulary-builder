@@ -108,8 +108,7 @@ class VocBuilderCSVFile:
                 continue
             new_file.append_word(w, date_added)
 
-        # Replace current file with new file
-        os.rename(new_path, self.file_path)
+        os.replace(new_path, self.file_path)
 
     @staticmethod
     def get_current_date() -> str:
