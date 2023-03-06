@@ -1,6 +1,6 @@
-# AI Vocabulary Builder
+# AI 生词本
 
-AI Vocabulary Builder（后简称“aivoc”）是一个利用了 AI 技术的智能生词本工具，可以帮你快速构建起自己的生词库，学习起来事半功倍。
+AI 生词本（“AI Vocabulary Builder” 简称 aivoc）是一个利用了 AI 技术的智能生词本工具，可以帮你快速构建起自己的生词库，学习起来事半功倍。
 
 学习一门语言，生词本是一个非常重要的工具。一个内容优秀的生词本，至少需要包含：**生词、释义、例句、例句释义**这些内容。但是，手动维护这些内容非常麻烦，因此大部分人都没有自己的生词本。阅读时碰见生词，常常查过词典，转头就忘。
 
@@ -12,7 +12,7 @@ aivoc 尝试着使用 ChatGPT 的能力，将生词本的维护成本降到最�
 - 由 AI 提取出的生词及释义
 - **一个免维护的全自动生词本表格**
 
-<img width="654" alt="image" src="https://user-images.githubusercontent.com/731266/222906122-5fa8d1fa-0f9f-4697-a227-bbcd7edc72fe.png">
+<img width="1033" alt="image" src="https://user-images.githubusercontent.com/731266/223053513-4cc3896e-00d2-41b7-b40a-7074a9d2db2c.png">
 
 ↑ 交互式使用界面
 
