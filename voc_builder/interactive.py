@@ -24,7 +24,7 @@ logger = logging.getLogger()
 console = Console()
 
 # Special commands
-# discard last added word, try to get other options and let user choose manually
+# no: discard last added word, try to get other options and let user choose from them manually
 COMMAND_NO = 'no'
 
 
@@ -39,7 +39,7 @@ class TransActionResult:
     """The result of a translation action
 
     :param input_text: The text user has inputted
-    :param stored_to_voc_book: whether the word has been added to vocabulary book
+    :param stored_to_voc_book: whether the word has been added to the vocabulary book
     :param error: The actual error message
     :param word_sample: The WordSample object
     """
@@ -51,7 +51,7 @@ class TransActionResult:
 
 
 def enter_interactive_mode():
-    """Enter the main interactive mode"""
+    """Enter the interactive mode"""
     console.print(
         Panel(
             dedent(
@@ -69,9 +69,9 @@ def enter_interactive_mode():
     )
     while True:
         text = Prompt.ask('[blue]>[/blue] Enter text').strip()
-        if not text.strip():
+        if not text:
             continue
-        if text == COMMAND_NO:
+        elif text == COMMAND_NO:
             handle_cmd_no()
             continue
 
@@ -86,15 +86,13 @@ def handle_cmd_no():
     """
     ret = LastActionResult.trans_result
     if not (ret and ret.stored_to_voc_book):
-        console.print(
-            'The "no" command was used to remove the last added word and select the word manually.'
-        )
-        console.print('Can\'t get the last added word, please start a new translation.')
+        console.print('The "no" command was used to remove the last added word and select the word manually.')
+        console.print('Can\'t get the last added word, please start a new translation first.')
         return
 
     assert ret.word_sample
     # Remove last word, mark as mastered
-    console.print(f'Removed "{ret.word_sample.word}", preparing other words...', style='grey42')
+    console.print(f'"{ret.word_sample.word}" was discarded, preparing other words...', style='grey42')
     get_csv_builder().remove_words({ret.word_sample.word})
     get_mastered_word_store().add(ret.word_sample.word)
 
@@ -104,7 +102,7 @@ def handle_cmd_no():
 
 
 def make_choice_manually(text: str, translated_text: str):
-    """Extract 3 most uncommon words, let the user choice manually
+    """Extract 3 most uncommon words, let the user select from them manually
 
     :param translated_text: The full content of translated text.
     """
@@ -127,9 +125,10 @@ def make_choice_manually(text: str, translated_text: str):
             progress.update(task_id, total=1, advance=1)
 
     if not choices:
-        console.print('No words can be extracted from the text you given, skip.', style='grey42')
+        console.print('No words could be extracted from the text you given, skip.', style='grey42')
         return
 
+    # Read user input
     choice_skip = 'None of above, skip for now.'
     str_choices = [w.get_console_display() for w in choices] + [choice_skip]
     answer = questionary.select("Choose the word you don't know", choices=str_choices).ask()

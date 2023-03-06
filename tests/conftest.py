@@ -6,7 +6,7 @@ from voc_builder.models import WordSample
 
 @pytest.fixture(autouse=True)
 def setup_config(tmp_path):
-    """Set up configs, changing the path of databases and book so no one get hurt."""
+    """Set up configs, change the path of databases and book so no one get hurt."""
     config.DEFAULT_DB_PATH = tmp_path
     config.DEFAULT_CSV_FILE_PATH = tmp_path / 'foo.csv'
 
