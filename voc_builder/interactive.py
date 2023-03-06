@@ -80,9 +80,7 @@ def handle_cmd_no():
     """
     ret = LastActionResult.trans_result
     if not (ret and ret.stored_to_voc_book):
-        console.print(
-            'The "no" command was used to remove last added word and choose word manually.'
-        )
+        console.print('The "no" command was used to remove last added word and choose word manually.')
         console.print('Can\'t find any added word, please start a new translation.')
         return
 
@@ -141,7 +139,7 @@ def make_choice_manually(text: str, translated_text: str):
     )
 
     try:
-        validate_result_word(word, text, builder)
+        validate_result_word(word, text)
     except WordInvalidForAdding as e:
         console.print(f'Unable to add "{word.word}", reason: {e}', style='grey42')
         return
