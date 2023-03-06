@@ -1,3 +1,5 @@
+from unittest import mock
+
 from voc_builder.builder import VocBuilderCSVFile
 from voc_builder.models import WordSample
 
@@ -38,11 +40,16 @@ class TestVocBuilderCSVFile:
 
     def test_remove_word(self, tmp_path, w_sample_world):
         builder = VocBuilderCSVFile(tmp_path / 'foo.csv')
-        builder.append_word(w_sample_world)
-        builder.append_word(WordSample('hello', '你好', 'həˈlō', 'Hello.', '你好。'))
-        assert len(builder.read_all()) == 2
+        with mock.patch.object(builder, 'get_current_date', return_value='special_date'):
+            builder.append_word(w_sample_world)
+            builder.append_word(WordSample('hello', '你好', 'həˈlō', 'Hello.', '你好。'))
+            words = list(builder.read_all_with_meta())
+            assert len(words) == 2
+            assert words[0][1] == 'special_date'
 
         builder.remove_words({'world'})
-        words = builder.read_all()
+        words = list(builder.read_all_with_meta())
         assert len(words) == 1
-        assert words[0].word == 'hello'
+        assert words[0][0].word == 'hello'
+        # The date_added should remain intact
+        assert words[0][1] == 'special_date'

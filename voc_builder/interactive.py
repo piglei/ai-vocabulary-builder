@@ -86,13 +86,17 @@ def handle_cmd_no():
     """
     ret = LastActionResult.trans_result
     if not (ret and ret.stored_to_voc_book):
-        console.print('The "no" command was used to remove the last added word and select the word manually.')
+        console.print(
+            'The "no" command was used to remove the last added word and select the word manually.'
+        )
         console.print('Can\'t get the last added word, please start a new translation first.')
         return
 
     assert ret.word_sample
     # Remove last word, mark as mastered
-    console.print(f'"{ret.word_sample.word}" was discarded, preparing other words...', style='grey42')
+    console.print(
+        f'"{ret.word_sample.word}" was discarded, preparing other words...', style='grey42'
+    )
     get_csv_builder().remove_words({ret.word_sample.word})
     get_mastered_word_store().add(ret.word_sample.word)
 

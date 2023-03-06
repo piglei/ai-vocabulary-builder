@@ -4,7 +4,7 @@ import datetime
 import logging
 import os
 from pathlib import Path
-from typing import List, Set, TextIO
+from typing import Iterable, List, Optional, Set, TextIO, Tuple
 
 from voc_builder import config
 from voc_builder.models import WordSample
@@ -28,15 +28,16 @@ class VocBuilderCSVFile:
 
         self.file_path = file_path
 
-    def append_word(self, w: WordSample):
+    def append_word(self, w: WordSample, date_added: Optional[str] = None):
         """Append a word to the current file
 
         :param w: WordSample object
+        :param date_added: When the word was added, use now() if not given
         """
         with open(self.file_path, 'a', encoding='utf-8') as fp:
             self._get_writer(fp).writerow(
                 (
-                    datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),
+                    date_added if date_added else self.get_current_date(),
                     w.word,
                     w.pronunciation,
                     w.word_meaning,
@@ -60,7 +61,16 @@ class VocBuilderCSVFile:
 
         :return: List of WordSample objects
         """
-        words = []
+        items = []
+        for w, _ in self.read_all_with_meta():
+            items.append(w)
+        return items
+
+    def read_all_with_meta(self) -> Iterable[Tuple[WordSample, str]]:
+        """Read all words from file, include extra metadata
+
+        :return: List of (WordSample, date_added)
+        """
         with open(self.file_path, 'r', encoding='utf-8') as fp:
             for row in self._get_reader(fp):
                 t, tran_t = row['例句/翻译'].split(' / ', 1)
@@ -71,8 +81,7 @@ class VocBuilderCSVFile:
                     orig_text=t,
                     translated_text=tran_t,
                 )
-                words.append(w)
-        return words
+                yield w, row['添加时间']
 
     def find_known_words(self, words: Set[str]) -> Set[str]:
         """Find out words already in record
@@ -93,14 +102,19 @@ class VocBuilderCSVFile:
             new_path.unlink()
 
         new_file = VocBuilderCSVFile(new_path)
-        for w in self.read_all():
+        for w, date_added in self.read_all_with_meta():
             # Skip words
             if w.word in words:
                 continue
-            new_file.append_word(w)
+            new_file.append_word(w, date_added)
 
         # Replace current file with new file
         os.rename(new_path, self.file_path)
+
+    @staticmethod
+    def get_current_date() -> str:
+        """Return current date and time"""
+        return datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
 
     def _get_reader(self, fp: TextIO):
         """Get the CSV reader obj"""
