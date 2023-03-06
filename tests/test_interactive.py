@@ -19,7 +19,7 @@ class TestCmdTrans:
         get_csv_builder().append_word(WordSample.make_empty('foo'))
         get_mastered_word_store().add('baz')
 
-        with mock.patch('voc_builder.interactive.query_openai') as mocked_query:
+        with mock.patch('voc_builder.openai_svc.query_openai') as mocked_query:
             mocked_query.return_value = OPENAI_REPLY_QUERY
             handle_cmd_trans("foo bar baz!")
             mocked_query.assert_called_once_with("foo bar baz!", {'foo', 'baz'})

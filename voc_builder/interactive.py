@@ -14,7 +14,7 @@ from voc_builder import config
 from voc_builder.builder import get_csv_builder
 from voc_builder.exceptions import VocBuilderError, WordInvalidForAdding
 from voc_builder.models import WordChoice, WordSample
-from voc_builder.openai_svc import get_word_choices, parse_openai_reply, query_openai
+from voc_builder.openai_svc import get_word_choices, get_word_and_translation
 from voc_builder.store import get_mastered_word_store
 from voc_builder.utils import tokenize_text
 
@@ -217,22 +217,3 @@ def format_as_console_table(word: WordSample) -> Table:
     table.add_row("[bold]释义[/bold]", word.word_meaning)
     table.add_row("[bold]发音[/bold]", word.pronunciation)
     return table
-
-
-def get_word_and_translation(text: str, known_words: Set[str]) -> WordSample:
-    """Get the most uncommon word in the given text, the result also include other
-    information such as meaning of the word and etc.
-
-    :param text: The text which needs to be translated
-    :param known_words: Words already known
-    :return: a `WordSample` object
-    :raise VocBuilderError: when unable to finish the API call or reply is malformed
-    """
-    try:
-        reply = query_openai(text, known_words)
-    except Exception as e:
-        raise VocBuilderError('Error querying OpenAI API: %s' % e)
-    try:
-        return parse_openai_reply(reply, text)
-    except ValueError as e:
-        raise VocBuilderError(e)
