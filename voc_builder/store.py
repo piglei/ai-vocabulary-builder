@@ -3,6 +3,8 @@ from typing import List, Set
 
 from tinydb import Query, TinyDB
 
+from voc_builder import config
+
 
 class MasteredWordStore:
     """Stores words the user has already mastered
@@ -51,3 +53,21 @@ class MasteredWordStore:
         """
         MWord = Query()
         return bool(self._db.search(MWord.word == word))
+
+
+# Database related functions
+
+_db_initialized = False
+
+
+def initialized_db():
+    """Set up databases, make global objects"""
+    global _db_initialized
+    _db_initialized = True
+    config.DEFAULT_DB_PATH.mkdir(exist_ok=True)
+
+
+def get_mastered_word_store() -> MasteredWordStore:
+    if not _db_initialized:
+        initialized_db()
+    return MasteredWordStore(config.DEFAULT_DB_PATH / 'mastered_word.json')
