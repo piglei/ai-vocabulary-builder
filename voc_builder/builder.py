@@ -61,7 +61,7 @@ class VocBuilderCSVFile:
         :return: List of WordSample objects
         """
         words = []
-        with open(self.file_path, 'r') as fp:
+        with open(self.file_path, 'r', encoding='utf-8') as fp:
             for row in self._get_reader(fp):
                 t, tran_t = row['例句/翻译'].split(' / ', 1)
                 w = WordSample(
