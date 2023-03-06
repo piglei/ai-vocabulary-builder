@@ -16,7 +16,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt
 from rich.table import Table
 
-from voc_builder.interactive import COMMAND_NO, handle_command_no
+from voc_builder.exceptions import VocBuilderError, WordInvalidForAdding
 from voc_builder.models import WordSample
 from voc_builder.openai_svc import parse_openai_reply, query_openai
 from voc_builder.store import MasteredWordStore
@@ -36,19 +36,13 @@ DEFAULT_DB_PATH = Path('~/.aivoc_db').expanduser()
 console = Console()
 
 
-class VocBuilderError(Exception):
-    """Base exception type for aivoc."""
-
-
-class WordInvalidForAdding(VocBuilderError):
-    """Raised when a word sample is invalid for adding into vocabulary book"""
-
-
 def write_new_one(text: str, csv_book_path: Path = DEFAULT_CSV_FILE_PATH):
     """Write a new word to the vocabulary book
 
     :param csv_book_path: The path of vocabulary book
     """
+    from voc_builder.interactive import ActionResult
+
     builder = VocBuilderCSVFile(csv_book_path)
     mastered_word_s = get_mastered_word_store()
 
@@ -64,7 +58,7 @@ def write_new_one(text: str, csv_book_path: Path = DEFAULT_CSV_FILE_PATH):
         except VocBuilderError as e:
             console.print(f'[red] Error processing text, detail: {e}[red]')
             progress.update(task_id, total=1, advance=1)
-            return
+            return ActionResult(input_text=text, stored_to_voc_book=False, error=str(e))
 
     console.print(format_as_console_table(word))
 
@@ -72,7 +66,7 @@ def write_new_one(text: str, csv_book_path: Path = DEFAULT_CSV_FILE_PATH):
         validate_result_word(word, text, builder)
     except WordInvalidForAdding as e:
         console.print(f'Unable to add "{word.word}", reason: {e}', style='grey42')
-        return
+        return ActionResult(input_text=text, stored_to_voc_book=False, error=str(e))
 
     builder.append_word(word)
     console.print(
@@ -82,6 +76,7 @@ def write_new_one(text: str, csv_book_path: Path = DEFAULT_CSV_FILE_PATH):
         ),
         style='grey42',
     )
+    return ActionResult(input_text=text, stored_to_voc_book=True, word_sample=word)
 
 
 def validate_result_word(word: WordSample, orig_text: str, builder: 'VocBuilderCSVFile'):
@@ -246,7 +241,9 @@ def get_mastered_word_store() -> MasteredWordStore:
 @click.command()
 @click.option('--api-key', envvar='OPENAI_API_KEY', required=True, help='Your OpenAI API key')
 @click.option('--text', type=str, help='Text to be translated, interactive mode also supported')
-@click.option('--log-level', type=str, default='INFO', help='Log level, change it to DEBUG to see more logs')
+@click.option(
+    '--log-level', type=str, default='INFO', help='Log level, change it to DEBUG to see more logs'
+)
 def main(api_key: str, text: str, log_level: str):
     # Set logging level
     logger.setLevel(getattr(logging, log_level.upper()))
@@ -276,16 +273,19 @@ def main(api_key: str, text: str, log_level: str):
         )
     )
 
+    # TODO: Refactor to fix circular import
+    from voc_builder.interactive import COMMAND_NO, handle_command_no
+    from voc_builder.interactive import LastActionResult
+
     while True:
         text = Prompt.ask('[blue]>[/blue] Enter text').strip()
         if not text.strip():
             continue
         if text == COMMAND_NO:
             handle_command_no()
-            console.print('Under construction')
             continue
 
-        write_new_one(text.strip())
+        LastActionResult.result = write_new_one(text.strip())
 
 
 if __name__ == '__main__':
