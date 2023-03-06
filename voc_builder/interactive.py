@@ -1,9 +1,11 @@
 """Functions relative with the interactive REPL"""
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import ClassVar, Optional, Set
+from typing import ClassVar, Optional
+import traceback
 
 import questionary
+import logging
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -18,6 +20,7 @@ from voc_builder.openai_svc import get_word_choices, get_word_and_translation
 from voc_builder.store import get_mastered_word_store
 from voc_builder.utils import tokenize_text
 
+logger = logging.getLogger()
 console = Console()
 
 # Special commands
@@ -54,9 +57,12 @@ def enter_interactive_mode():
             dedent(
                 f'''
     [bold]Guides[/bold]:
-    - Input one sentence at a time, don't paste huge amounts of text
-    - The vocabulary book can be found at [bold]{config.DEFAULT_CSV_FILE_PATH}[/bold]
-    - Press Ctrl+c to quit'''
+    - Enter your text to start translating and building vocabulary
+    - One sentence at a time, don't paste huge amounts of text at once
+    - The vocabulary book file can be found at [bold]{config.DEFAULT_CSV_FILE_PATH}[/bold]
+    - Special Command:
+        * [bold]no[/bold]: remove the last added word and start a manual selection
+        * [Ctrl+c] to quit'''
             ).strip(),
             title='Welcome to AI Vocabulary Builder!',
         )
@@ -80,8 +86,8 @@ def handle_cmd_no():
     """
     ret = LastActionResult.trans_result
     if not (ret and ret.stored_to_voc_book):
-        console.print('The "no" command was used to remove last added word and choose word manually.')
-        console.print('Can\'t find any added word, please start a new translation.')
+        console.print('The "no" command was used to remove the last added word and select the word manually.')
+        console.print('Can\'t get the last added word, please start a new translation.')
         return
 
     assert ret.word_sample
@@ -111,17 +117,18 @@ def make_choice_manually(text: str, translated_text: str):
         task_id = progress.add_task("get", start=False)
         try:
             choices = get_word_choices(text, known_words)
-            progress.update(task_id, total=1, advance=1)
         except VocBuilderError as e:
             console.print(f'[red] Error processing text, detail: {e}[red]')
-            progress.update(task_id, total=1, advance=1)
+            logger.debug('Detailed stack trace info: %s', traceback.format_exc())
             return
+        finally:
+            progress.update(task_id, total=1, advance=1)
 
     if not choices:
         console.print('No words can be extracted from the text you given, skip.', style='grey42')
         return
 
-    choice_skip = 'None of this above, skip for now.'
+    choice_skip = 'None of above, skip for now.'
     str_choices = [w.get_console_display() for w in choices] + [choice_skip]
     answer = questionary.select("Choose the word you don't know", choices=str_choices).ask()
     if answer == choice_skip:
@@ -171,11 +178,12 @@ def handle_cmd_trans(text: str):
         task_id = progress.add_task("get", start=False)
         try:
             word = get_word_and_translation(text, known_words)
-            progress.update(task_id, total=1, advance=1)
         except VocBuilderError as e:
             console.print(f'[red] Error processing text, detail: {e}[red]')
-            progress.update(task_id, total=1, advance=1)
+            logger.debug('Detailed stack trace info: %s', traceback.format_exc())
             return TransActionResult(input_text=text, stored_to_voc_book=False, error=str(e))
+        finally:
+            progress.update(task_id, total=1, advance=1)
 
     console.print(format_as_console_table(word))
 

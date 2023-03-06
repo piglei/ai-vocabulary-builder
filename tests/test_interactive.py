@@ -25,6 +25,9 @@ class TestCmdTrans:
             mocked_query.assert_called_once_with("foo bar baz!", {'foo', 'baz'})
 
 
+# TODO: Test cmd no
+
+
 def test_validate_result_word_misc(tmp_path):
     builder = get_csv_builder()
     validate_result_word(WordSample.make_empty('foo'), 'foo bar')
