@@ -23,7 +23,7 @@ class VocBuilderCSVFile:
     def __init__(self, file_path: Path):
         # Initialize the file if not exists
         if not file_path.exists():
-            with open(file_path, 'w') as fp:
+            with open(file_path, 'w', encoding='utf-8') as fp:
                 self._get_writer(fp).writerow(self.header_row)
 
         self.file_path = file_path
@@ -33,7 +33,7 @@ class VocBuilderCSVFile:
 
         :param w: WordSample object
         """
-        with open(self.file_path, 'a') as fp:
+        with open(self.file_path, 'a', encoding='utf-8') as fp:
             self._get_writer(fp).writerow(
                 (
                     datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),
