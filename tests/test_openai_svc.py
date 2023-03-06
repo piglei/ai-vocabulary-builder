@@ -1,50 +1,7 @@
-import tempfile
-from pathlib import Path
-
 import pytest
 
-from voc_builder.main import VocBuilderCSVFile, WordSample, parse_openai_reply
-
-
-@pytest.fixture
-def w_sample_world() -> WordSample:
-    return WordSample('world', '世界', 'wɔrld', 'Hello, world!', '你好，世界！')
-
-
-class TestVocBuilderCSVFile:
-    def test_is_duplicated(self, w_sample_world):
-        p = Path(tempfile.mktemp())
-        builder = VocBuilderCSVFile(p)
-        assert builder.is_duplicated(w_sample_world) is False
-
-        builder.append_word(w_sample_world)
-        assert builder.is_duplicated(w_sample_world) is True
-
-    def test_find_known_words(self, w_sample_world):
-        builder = VocBuilderCSVFile(Path(tempfile.mktemp()))
-        builder.append_word(w_sample_world)
-        assert builder.find_known_words('Hello, world') == ['world']
-
-    def test_repeated_calls(self, w_sample_world):
-        p = Path(tempfile.mktemp())
-        builder = VocBuilderCSVFile(p)
-        builder.append_word(w_sample_world)
-
-        words = builder.read_all()
-        assert len(words) == 1
-        assert words[0].word == 'world'
-        assert words[0].word_meaning == '世界'
-        assert words[0].translated_text == '你好，世界！'
-
-        # re-initialize the obj and append another word
-        builder_2 = VocBuilderCSVFile(p)
-        builder_2.append_word(WordSample('Hello', '你好', 'həˈlō', 'Hello.', '你好。'))
-
-        words_2 = builder_2.read_all()
-        assert len(words_2) == 2
-        assert words_2[1].word == 'Hello'
-        assert words_2[1].word_meaning == '你好'
-        assert words_2[1].translated_text == '你好。'
+from voc_builder.models import WordChoice, WordSample
+from voc_builder.openai_svc import parse_openai_reply, parse_word_choices_reply
 
 
 @pytest.mark.parametrize(
@@ -99,3 +56,25 @@ def test_parse_openai_reply(orig_text, input, expected):
             parse_openai_reply(input, orig_text)
     else:
         assert parse_openai_reply(input, orig_text) == expected
+
+
+@pytest.mark.parametrize(
+    'input,expected',
+    [
+        # A standard reply
+        (
+            '\n\nword: versions\npronunciation: /\u02c8v\u0259r\u0292\u0259nz/\nmeaning: \u7248\u672c\n\nword: ambiguous\npronunciation: /\u00e6m\u02c8b\u026a\u0261ju\u0259s/\nmeaning: \u6a21\u68f1\u4e24\u53ef\u7684\n\nword: nested\npronunciation: /\u02c8n\u025bst\u026ad/\nmeaning: \u5d4c\u5957\u7684',  # noqa: E501
+            [
+                WordChoice(word='versions', word_meaning='版本', pronunciation='/ˈvərʒənz/'),
+                WordChoice(word='ambiguous', word_meaning='模棱两可的', pronunciation='/æmˈbɪɡjuəs/'),
+                WordChoice(word='nested', word_meaning='嵌套的', pronunciation='/ˈnɛstɪd/'),
+            ],
+        ),
+        (
+            'invalid reply',
+            [],
+        ),
+    ],
+)
+def test_parse_word_choices_reply(input, expected):
+    assert parse_word_choices_reply(input) == expected
