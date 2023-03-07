@@ -22,7 +22,7 @@ from voc_builder.openai_svc import parse_openai_reply, parse_word_choices_reply
         # A reply using non-standard key name
         (
             'Hello, world.',
-            'Uncommon word: world\npronunciation: wɔːld\nmeaning: 世界\ntranslated: 你好，世界。',
+            'unknown-word: world\npronunciation: wɔːld\nmeaning: 世界\ntranslated: 你好，世界。',
             WordSample(
                 word='world',
                 pronunciation='wɔːld',
@@ -68,6 +68,13 @@ def test_parse_openai_reply(orig_text, input, expected):
                 WordChoice(word='versions', word_meaning='版本', pronunciation='/ˈvərʒənz/'),
                 WordChoice(word='ambiguous', word_meaning='模棱两可的', pronunciation='/æmˈbɪɡjuəs/'),
                 WordChoice(word='nested', word_meaning='嵌套的', pronunciation='/ˈnɛstɪd/'),
+            ],
+        ),
+        # A reply with non-standard key name
+        (
+            '\n\nUnknown-word: versions\npronunciation: /\u02c8v\u0259r\u0292\u0259nz/\nmeaning: \u7248\u672c',
+            [
+                WordChoice(word='versions', word_meaning='版本', pronunciation='/ˈvərʒənz/'),
             ],
         ),
         (
