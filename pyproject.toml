@@ -16,6 +16,7 @@ openai = "^0.27.0"
 rich = "^13.0.0"
 tinydb = "^4.7.1"
 questionary = "^1.10.0"
+prompt-toolkit = "^3.0.38"
 
 [tool.poetry.scripts]
 aivoc = "voc_builder.main:main"

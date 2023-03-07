@@ -6,10 +6,12 @@ from textwrap import dedent
 from typing import ClassVar, Optional
 
 import questionary
+from prompt_toolkit import prompt
+from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.styles import Style
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.prompt import Prompt
 from rich.table import Table
 
 from voc_builder import config
@@ -50,6 +52,15 @@ class TransActionResult:
     word_sample: Optional[WordSample] = None
 
 
+prompt_style = Style.from_dict(
+    {
+        # Prompt
+        "tip": "bold",
+        "arrow": "bold",
+    }
+)
+
+
 def enter_interactive_mode():
     """Enter the interactive mode"""
     console.print(
@@ -68,7 +79,9 @@ def enter_interactive_mode():
         )
     )
     while True:
-        text = Prompt.ask('[blue]>[/blue] Enter text').strip()
+        text = prompt(
+            HTML('<tip>Enter text</tip><arrow>&gt;</arrow> '), style=prompt_style
+        ).strip()
         if not text:
             continue
         elif text == COMMAND_NO:
