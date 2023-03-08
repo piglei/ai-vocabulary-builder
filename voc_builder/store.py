@@ -1,4 +1,5 @@
 import copy
+import datetime
 import math
 import random
 import time
@@ -74,6 +75,11 @@ class WordDetailedObj:
         """A shortcut for retrieving word string"""
         return self.ws.word
 
+    @property
+    def date_added(self) -> str:
+        """Return a well formatted date added string for display"""
+        return datetime.datetime.fromtimestamp(self.ts_date_added).strftime('%Y-%m-%d %H:%M')
+
 
 class WordStore:
     """Stores all the words in vocabulary book
@@ -123,14 +129,17 @@ class WordStore:
         """
         return {word for word in words if self.exists(word)}
 
-    def add(self, word: WordSample):
-        """Add a word to the vocabulary book"""
+    def add(self, word: WordSample, ts_date_added: Optional[float] = None):
+        """Add a word to the vocabulary book
+
+        :param ts_date_added: If given, use this value as date added instead.
+        """
         Word = Query()
         return self._db.upsert(
             {
                 'ws': asdict(word),
                 'wp': asdict(WordProgress(word=word.word)),
-                'ts_date_added': time.time(),
+                'ts_date_added': ts_date_added if ts_date_added is not None else time.time(),
             },
             Word.ws.word == word.word,
         )

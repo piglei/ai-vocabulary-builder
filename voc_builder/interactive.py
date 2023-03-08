@@ -15,6 +15,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from voc_builder import config
+from voc_builder.builder import migrate_builder_data_to_store
 from voc_builder.exceptions import VocBuilderError, WordInvalidForAdding
 from voc_builder.models import WordChoice, WordSample
 from voc_builder.openai_svc import get_word_and_translation, get_word_choices
@@ -64,6 +65,14 @@ prompt_style = Style.from_dict(
 
 def enter_interactive_mode():
     """Enter the interactive mode"""
+    # Try to migrate the data in the CSV file(for version < 0.2) to the new word store which was
+    # based on TinyDB, this should be a one off action.
+    try:
+        migrate_builder_data_to_store(console)
+    except Exception as e:
+        logger.debug('Detailed stack trace info: %s', traceback.format_exc())
+        console.print(f'Error migrating data from CSV file: {e}')
+
     console.print(
         Panel(
             dedent(
