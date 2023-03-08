@@ -19,10 +19,6 @@ AI 生词本（“AI Vocabulary Builder” 简称 aivoc）是一个利用了 AI 
 
 ↑ 通过阅读故事，牢固掌握生词
 
-<img width="703" alt="image" src="https://user-images.githubusercontent.com/731266/223868925-71e8ac34-8ea5-4d72-b017-2ec22b0678b8.png">
-
-↑ 可导出生词库表格（使用 CSV 纯文本格式，方便二次处理）
-
 ## 快速开始
 
 本工具基于 Python 开发，请使用 pip 来安装本工具：
