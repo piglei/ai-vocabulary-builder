@@ -26,21 +26,7 @@ def handle_export(format: str, file_path: Optional[str]):
         use stdout
     """
     if format == FormatType.ASCII.value:
-        table = Table(title='', show_header=True)
-        table.add_column("单词")
-        table.add_column("发音")
-        table.add_column("释义", overflow='fold', max_width=24)
-        table.add_column("例句 / 翻译", overflow='fold')
-        table.add_column("添加时间")
-        for w in get_word_store().all():
-            table.add_row(
-                w.word,
-                w.ws.pronunciation,
-                w.ws.word_meaning,
-                highlight_words(w.ws.orig_text, [w.word]) + '\n' + w.ws.translated_text,
-                w.date_added,
-            )
-
+        table = build_ascii_table()
         if file_path:
             with open(file_path, 'w', encoding='utf-8') as fp:
                 Console(file=fp).print(table)
@@ -58,20 +44,42 @@ def handle_export(format: str, file_path: Optional[str]):
         return
 
 
+def build_ascii_table() -> Table:
+    """Build the Table object for display"""
+    table = Table(title='', show_header=True)
+    table.add_column("#")
+    table.add_column("单词")
+    table.add_column("发音")
+    table.add_column("释义", overflow='fold', max_width=24)
+    table.add_column("例句 / 翻译", overflow='fold')
+    table.add_column("添加时间")
+    for i, w in enumerate(get_word_store().all(), start=1):
+        table.add_row(
+            str(i),
+            w.word,
+            w.ws.pronunciation,
+            w.ws.word_meaning,
+            highlight_words(w.ws.orig_text, [w.word]) + '\n' + w.ws.translated_text,
+            w.date_added,
+        )
+    return table
+
+
 class VocCSVWriter:
     """Write vocabulary book into CSV file
 
     :param fp: The file object
     """
 
-    header_row = ('单词', '读音', '释义', '例句/翻译', '添加时间')
+    header_row = ('#', '单词', '读音', '释义', '例句/翻译', '添加时间')
 
     def write_to(self, fp: TextIO):
         """Write to the given file object"""
         self._get_writer(fp).writerow(self.header_row)
-        for w in get_word_store().all():
+        for i, w in enumerate(get_word_store().all(), start=1):
             self._get_writer(fp).writerow(
                 (
+                    str(i),
                     w.word,
                     w.ws.pronunciation,
                     w.ws.word_meaning,

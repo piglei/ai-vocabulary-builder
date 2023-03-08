@@ -97,7 +97,9 @@ class WordStore:
         :param count: How many words to pick
         :return: A list of words
         """
-        all_words = sorted(self.all(), key=lambda obj: (obj.wp.storied_cnt, obj.ts_date_added))
+        all_words = sorted(
+            self.all(), key=lambda obj: (obj.wp.ts_date_storied or 0, obj.ts_date_added or 0)
+        )
         # Randomize the result by picking from a slightly lager range
         results = all_words[: math.ceil(1.5 * count)]
         random.shuffle(results)

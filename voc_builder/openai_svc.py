@@ -3,7 +3,7 @@ from typing import Dict, List, Set, Tuple
 
 import openai
 
-from voc_builder.exceptions import VocBuilderError
+from voc_builder.exceptions import OpenAIServiceError
 from voc_builder.models import WordChoice, WordSample
 
 logger = logging.getLogger()
@@ -21,11 +21,11 @@ def get_word_and_translation(text: str, known_words: Set[str]) -> WordSample:
     try:
         reply = query_openai(text, known_words)
     except Exception as e:
-        raise VocBuilderError('Error querying OpenAI API: %s' % e)
+        raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
     try:
         return parse_openai_reply(reply, text)
     except ValueError as e:
-        raise VocBuilderError(e)
+        raise OpenAIServiceError(e)
 
 
 # The prompt being used to make word
@@ -122,11 +122,11 @@ def get_word_choices(text: str, known_words: Set[str]) -> List[WordChoice]:
     try:
         reply = query_get_word_choices(text, known_words)
     except Exception as e:
-        raise VocBuilderError('Error querying OpenAI API: %s' % e)
+        raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
     try:
         return parse_word_choices_reply(reply)
     except ValueError as e:
-        raise VocBuilderError(e)
+        raise OpenAIServiceError(e)
 
 
 # The prompt being used to extract multiple words
@@ -218,23 +218,28 @@ def parse_word_choices_reply(reply_text: str) -> List[WordChoice]:
 
 # The prompt being used to generate stroy from words
 prompt_write_story_user_tmpl = """\
-Please write a short story, it must include these words: {words}.
+Please write a short story which is less than 200 words, the story should use
+simple words and these words must be included: {words}.
 """
 
 
-def get_stroy(words: List[WordSample]) -> str:
+def get_story(words: List[WordSample]) -> str:
     """Query OpenAI to get a story.
 
     :return: The story text
+    :raise: VocBuilderError
     """
     words_str = ','.join([w.word for w in words])
-    user_content = prompt_word_choices_user_tmpl.format(words=words_str)
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            # Use a single "user" message at this moment because "system" role doesn't perform better
-            {"role": "user", "content": user_content},
-        ],
-    )
+    user_content = prompt_write_story_user_tmpl.format(words=words_str)
+    try:
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                # Use a single "user" message at this moment because "system" role doesn't perform better
+                {"role": "user", "content": user_content},
+            ],
+        )
+    except Exception as e:
+        raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
     logger.debug('Completion API returns: %s', completion)
     return completion.choices[0].message.content.strip()

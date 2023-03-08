@@ -23,7 +23,7 @@ def main(ctx):
         return run()
 
 
-@main.command()
+@main.command(help='Start the interactive shell')
 @click.option('--api-key', envvar='OPENAI_API_KEY', required=True, help='Your OpenAI API key')
 @click.option('--text', type=str, help='Text to be translated, interactive mode also supported')
 @click.option(
@@ -52,7 +52,7 @@ def run(api_key: str, text: str, log_level: str):
 @click.option(
     '--format',
     type=click.Choice([t.value for t in FormatType]),
-    default=FormatType.ASCII,
+    default=FormatType.ASCII.value,
     help='The format type, supported value: ascii, csv.',
 )
 @click.option(
