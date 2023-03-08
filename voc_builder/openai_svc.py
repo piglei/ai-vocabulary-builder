@@ -1,10 +1,9 @@
 import logging
-from textwrap import dedent
 from typing import Dict, List, Set, Tuple
 
 import openai
 
-from voc_builder.exceptions import VocBuilderError
+from voc_builder.exceptions import OpenAIServiceError
 from voc_builder.models import WordChoice, WordSample
 
 logger = logging.getLogger()
@@ -22,17 +21,16 @@ def get_word_and_translation(text: str, known_words: Set[str]) -> WordSample:
     try:
         reply = query_openai(text, known_words)
     except Exception as e:
-        raise VocBuilderError('Error querying OpenAI API: %s' % e)
+        raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
     try:
         return parse_openai_reply(reply, text)
     except ValueError as e:
-        raise VocBuilderError(e)
+        raise OpenAIServiceError(e)
 
 
 # The prompt being used to make word
-prompt_tmpl = dedent(
-    '''
-I will give you a sentence and a list of words called "known-words" which is divided
+prompt_main_system = """\
+You are a translation assistant, I will give you a sentence and a list of words called "known-words" which is divided
 by ",", please find out the most rarely used word in the sentence(the word must not in "known-words"),
 get the simplified Chinese meaning and the pronunciation of that word and translate
 the whole sentence into simplified Chinese.
@@ -45,14 +43,15 @@ Your answer should be separated into 4 different lines, each line's content is a
 - translated: {{translated_sentence}}
 
 The answer should have no extra content.
+"""
 
+prompt_main_user_tmpl = """\
 known-words: {known_words}
 
 The sentence is:
 
 {text}
-'''
-)
+"""
 
 
 def query_openai(text: str, known_words: Set[str]) -> str:
@@ -60,11 +59,14 @@ def query_openai(text: str, known_words: Set[str]) -> str:
 
     :return: Well formatted string contains word and meaning
     """
-    content = prompt_tmpl.format(text=text, known_words=','.join(known_words))
+    user_content = prompt_main_user_tmpl.format(text=text, known_words=','.join(known_words))
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "user", "content": content},
+            # {"role": "system", "content": prompt_main_system},
+            # {"role": "user", "content": user_content},
+            # Use a single "user" message at this moment because "system" role doesn't perform better
+            {"role": "user", "content": prompt_main_system + '\n' + user_content},
         ],
     )
     logger.debug('Completion API returns: %s', completion)
@@ -90,7 +92,7 @@ def parse_openai_reply(reply_text: str, orig_text: str) -> WordSample:
     # these situations.
     #   {field_name}: {list_of_possible_keys}
     possible_field_index: Dict[str, List[str]] = {
-        'word': ['word', 'uncommon word'],
+        'word': ['word', 'unknown-word', 'unknown word'],
         'word_meaning': ['meaning'],
         'pronunciation': ['pronunciation'],
         'translated_text': ['translated'],
@@ -120,17 +122,16 @@ def get_word_choices(text: str, known_words: Set[str]) -> List[WordChoice]:
     try:
         reply = query_get_word_choices(text, known_words)
     except Exception as e:
-        raise VocBuilderError('Error querying OpenAI API: %s' % e)
+        raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
     try:
         return parse_word_choices_reply(reply)
     except ValueError as e:
-        raise VocBuilderError(e)
+        raise OpenAIServiceError(e)
 
 
 # The prompt being used to extract multiple words
-prompt_word_choices_tmpl = dedent(
-    '''
-I will give you a sentence and a list of words called "known-words" which is divided
+prompt_word_choices_system = '''\
+You are a translation assistant, I will give you a sentence and a list of words called "known-words" which is divided
 by ",", please find out the top 3 rarely used word in the sentence(the word must not in "known-words"),
 get the simplified Chinese meaning and the pronunciation of each word.
 
@@ -140,15 +141,14 @@ For each word, your answer should be separated into 3 different lines, each line
 - pronunciation: {{pronunciation}}
 - meaning: {{chinese_meaning_of_word}}
 
-The answer should have no extra content.
+The answer should have no extra content.'''
 
+prompt_word_choices_user_tmpl = """\
 known-words: {known_words}
 
 The sentence is:
 
-{text}
-'''
-)
+{text}"""
 
 
 def query_get_word_choices(text: str, known_words: Set[str]) -> str:
@@ -156,11 +156,16 @@ def query_get_word_choices(text: str, known_words: Set[str]) -> str:
 
     :return: Well formatted string contains word and meaning
     """
-    content = prompt_word_choices_tmpl.format(text=text, known_words=','.join(known_words))
+    user_content = prompt_word_choices_user_tmpl.format(
+        text=text, known_words=','.join(known_words)
+    )
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "user", "content": content},
+            # {"role": "system", "content": prompt_word_choices_system},
+            # {"role": "user", "content": user_content},
+            # Use a single "user" message at this moment because "system" role doesn't perform better
+            {"role": "user", "content": prompt_word_choices_system + '\n' + user_content},
         ],
     )
     logger.debug('Completion API returns: %s', completion)
@@ -188,7 +193,7 @@ def parse_word_choices_reply(reply_text: str) -> List[WordChoice]:
     current_choice = None
     for key, value in raw_items:
         # The reply may use non-standard keys sometimes
-        if key in ['word', 'uncommon word']:
+        if key in ['word', 'unknown-word', 'unknown word']:
             # Word has changed, push last word in to result list
             if current_choice:
                 choices.append(WordChoice(**current_choice))
@@ -209,3 +214,32 @@ def parse_word_choices_reply(reply_text: str) -> List[WordChoice]:
     for c in choices:
         c.word = c.word.strip('{}').lower()
     return choices
+
+
+# The prompt being used to generate stroy from words
+prompt_write_story_user_tmpl = """\
+Please write a short story which is less than 200 words, the story should use
+simple words and these words must be included: {words}.
+"""
+
+
+def get_story(words: List[WordSample]) -> str:
+    """Query OpenAI to get a story.
+
+    :return: The story text
+    :raise: VocBuilderError
+    """
+    words_str = ','.join([w.word for w in words])
+    user_content = prompt_write_story_user_tmpl.format(words=words_str)
+    try:
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                # Use a single "user" message at this moment because "system" role doesn't perform better
+                {"role": "user", "content": user_content},
+            ],
+        )
+    except Exception as e:
+        raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
+    logger.debug('Completion API returns: %s', completion)
+    return completion.choices[0].message.content.strip()

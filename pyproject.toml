@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ai-vocabulary-builder"
-version = "0.1.3"
+version = "0.2.0"
 description = "A tool help you build your vocabulary book using AI."
 readme = "README.md"
 authors = ["piglei <piglei2007@gmail.com>"]
@@ -16,6 +16,7 @@ openai = "^0.27.0"
 rich = "^13.0.0"
 tinydb = "^4.7.1"
 questionary = "^1.10.0"
+prompt-toolkit = "^3.0.38"
 
 [tool.poetry.scripts]
 aivoc = "voc_builder.main:main"

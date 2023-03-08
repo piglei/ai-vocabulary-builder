@@ -1,4 +1,4 @@
-from voc_builder.utils import tokenize_text
+from voc_builder.utils import highlight_words, tokenize_text
 
 
 def test_tokenize_text():
@@ -13,3 +13,11 @@ def test_tokenize_text():
         'official',
         'for',
     }
+
+
+def test_highlight_words():
+    s = 'Welcome! This is the official documentation for Python.'
+    assert (
+        highlight_words(s, ['welcome', 'python'])
+        == '[bold][underline]Welcome[/underline][/bold]! This is the official documentation for [bold][underline]Python[/underline][/bold].'  # noqa: E501
+    )
