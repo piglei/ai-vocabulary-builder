@@ -1,11 +1,11 @@
 """Main entrance of AI Vocabulary Builder"""
 import logging
 import sys
-from typing import Optional, List
+from typing import List, Optional
 
-from rich.console import Console
 import click
 import openai
+from rich.console import Console
 
 from voc_builder import __version__
 from voc_builder.commands.export import FormatType, handle_export
