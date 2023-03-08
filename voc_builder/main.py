@@ -7,6 +7,7 @@ import click
 import openai
 
 from voc_builder.commands.export import FormatType, handle_export
+from voc_builder.commands.remove import handle_remove
 from voc_builder.interactive import enter_interactive_mode, handle_cmd_trans
 
 # Set logging to stdout by default
@@ -63,6 +64,18 @@ def run(api_key: str, text: str, log_level: str):
 )
 def export(format: str, file_path: Optional[str]):
     handle_export(format, file_path)
+
+
+@main.command(help='Remove words from your vocabulary book')
+@click.option(
+    '--remove-only',
+    type=bool,
+    default=False,
+    help='Only perform remove, do not mark the deleted words into "mastered words"(the default behaviour)',
+)
+@click.argument('words', nargs=-1, help='The words to be removed')
+def remove(hard_remove: bool, words):
+    handle_remove(words, hard_remove)
 
 
 if __name__ == '__main__':

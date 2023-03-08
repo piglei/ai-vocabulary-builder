@@ -14,7 +14,6 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
-from voc_builder import config
 from voc_builder.builder import migrate_builder_data_to_store
 from voc_builder.exceptions import OpenAIServiceError, WordInvalidForAdding
 from voc_builder.models import WordChoice, WordSample
@@ -105,11 +104,11 @@ def enter_interactive_mode():
     console.print(
         Panel(
             dedent(
-                f'''
+                '''
     [bold]Guides[/bold]:
     - Enter your text to start translating and building vocabulary
     - One sentence at a time, don't paste huge amounts of text at once
-    - The vocabulary book file can be found at [bold]{config.DEFAULT_CSV_FILE_PATH}[/bold]
+    - Get your vocabulary book file by running [bold]aivoc export --format csv[/bold]
     - Special Command:
         * [bold]no[/bold]: remove the last added word and start a manual selection
         * [bold]story[/bold]: Recall words by reading a story written by AI

@@ -170,13 +170,14 @@ class WordStore:
         for d in self._db.all():
             yield self._to_detailed_obj(d)
 
-    def remove(self, word: str):
+    def remove(self, word: str) -> List[int]:
         """Remove a word
 
         :param word: Lower cased word.
+        :return: A list of removed doc ID
         """
         Word = Query()
-        self._db.remove(Word.ws.word == word)
+        return self._db.remove(Word.ws.word == word)
 
     def exists(self, word: str):
         """Check if a word exists in current db
