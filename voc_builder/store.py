@@ -116,6 +116,13 @@ class WordStore:
                 Word.ws.word == obj.ws.word,
             )
 
+    def filter(self, words: Set[str]) -> Set[str]:
+        """Filter the given word list, return those exists in current db
+
+        :param words: a list of lower cased word.
+        """
+        return {word for word in words if self.exists(word)}
+
     def add(self, word: WordSample):
         """Add a word to the vocabulary book"""
         Word = Query()
@@ -159,6 +166,14 @@ class WordStore:
         """
         Word = Query()
         self._db.remove(Word.ws.word == word)
+
+    def exists(self, word: str):
+        """Check if a word exists in current db
+
+        :param word: Lower cased word.
+        """
+        Word = Query()
+        return bool(self._db.search(Word.ws.word == word))
 
     @staticmethod
     def _to_detailed_obj(d: Dict) -> WordDetailedObj:

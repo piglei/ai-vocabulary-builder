@@ -65,3 +65,9 @@ class TestWordStore:
         # Now the `pick_story_words` call should return a different word
         new_words = word_store.pick_story_words(count=1)
         assert new_words[0] != first_word
+
+    def test_filter(self, tmp_path):
+        word_store = WordStore(tmp_path / 'foo.json')
+        word_store.add(WordSample.make_empty('program'))
+        word_store.add(WordSample.make_empty('python'))
+        assert word_store.filter({'foo', 'python', 'bar'}) == {'python'}

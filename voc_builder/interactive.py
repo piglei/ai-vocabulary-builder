@@ -15,11 +15,10 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from voc_builder import config
-from voc_builder.builder import get_csv_builder
 from voc_builder.exceptions import VocBuilderError, WordInvalidForAdding
 from voc_builder.models import WordChoice, WordSample
 from voc_builder.openai_svc import get_word_and_translation, get_word_choices
-from voc_builder.store import get_mastered_word_store
+from voc_builder.store import get_mastered_word_store, get_word_store
 from voc_builder.utils import tokenize_text
 
 logger = logging.getLogger()
@@ -115,7 +114,7 @@ def handle_cmd_no():
     console.print(
         f'"{ret.word_sample.word}" was discarded, preparing other words...', style='grey42'
     )
-    get_csv_builder().remove_words({ret.word_sample.word})
+    get_word_store().remove(ret.word_sample.word)
     get_mastered_word_store().add(ret.word_sample.word)
 
     make_choice_manually(ret.input_text, ret.word_sample.translated_text)
@@ -128,13 +127,13 @@ def make_choice_manually(text: str, translated_text: str):
 
     :param translated_text: The full content of translated text.
     """
-    builder = get_csv_builder()
     mastered_word_s = get_mastered_word_store()
+    word_store = get_word_store()
 
     progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API"))
     orig_words = tokenize_text(text)
     # Words already in vocabulary book and marked as mastered are treated as "known"
-    known_words = builder.find_known_words(orig_words) | mastered_word_s.filter(orig_words)
+    known_words = word_store.filter(orig_words) | mastered_word_s.filter(orig_words)
     with progress:
         task_id = progress.add_task("get", start=False)
         try:
@@ -174,10 +173,10 @@ def make_choice_manually(text: str, translated_text: str):
         console.print(f'Unable to add "{word.word}", reason: {e}', style='grey42')
         return
 
-    builder.append_word(word)
+    word_store.add(word)
     console.print(
         (
-            f'[bold]"{word.word}"[/bold] was added to your vocabulary book ([bold]{builder.words_count()}[/bold] '
+            f'[bold]"{word.word}"[/bold] was added to your vocabulary book ([bold]{word_store.count()}[/bold] '
             'in total), well done!'
         ),
         style='grey42',
@@ -190,13 +189,13 @@ def handle_cmd_trans(text: str):
 
     :param csv_book_path: The path of vocabulary book
     """
-    builder = get_csv_builder()
     mastered_word_s = get_mastered_word_store()
+    word_store = get_word_store()
 
     progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API"))
     orig_words = tokenize_text(text)
     # Words already in vocabulary book and marked as mastered are treated as "known"
-    known_words = builder.find_known_words(orig_words) | mastered_word_s.filter(orig_words)
+    known_words = word_store.filter(orig_words) | mastered_word_s.filter(orig_words)
     with progress:
         task_id = progress.add_task("get", start=False)
         try:
@@ -216,10 +215,10 @@ def handle_cmd_trans(text: str):
         console.print(f'Unable to add "{word.word}", reason: {e}', style='grey42')
         return TransActionResult(input_text=text, stored_to_voc_book=False, error=str(e))
 
-    builder.append_word(word)
+    word_store.add(word)
     console.print(
         (
-            f'[bold]"{word.word}"[/bold] was added to your vocabulary book ([bold]{builder.words_count()}[/bold] '
+            f'[bold]"{word.word}"[/bold] was added to your vocabulary book ([bold]{word_store.count()}[/bold] '
             'in total), well done!'
         ),
         style='grey42',
@@ -239,7 +238,7 @@ def handle_cmd_story():
 
 def validate_result_word(word: WordSample, orig_text: str):
     """Check if a result word is valid before it can be put into vocabulary book"""
-    if get_csv_builder().is_duplicated(word):
+    if get_word_store().exists(word.word):
         raise WordInvalidForAdding('already in your vocabulary book')
     if get_mastered_word_store().exists(word.word):
         raise WordInvalidForAdding('already mastered')
