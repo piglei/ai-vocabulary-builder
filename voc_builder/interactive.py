@@ -134,11 +134,21 @@ def enter_interactive_mode():
         LastActionResult.trans_result = handle_cmd_trans(text.strip())
 
 
+MIN_LENGTH_TRANS_TEXT = 12
+
+
 def handle_cmd_trans(text: str) -> TransActionResult:
     """Write a new word to the vocabulary book
 
     :param csv_book_path: The path of vocabulary book
     """
+    if len(text) < MIN_LENGTH_TRANS_TEXT:
+        console.print(
+            f'Content too short, input at least {MIN_LENGTH_TRANS_TEXT} characters to start a translation.',
+        )
+        return TransActionResult(
+            input_text=text, stored_to_voc_book=False, error='input_too_short'
+        )
     mastered_word_s = get_mastered_word_store()
     word_store = get_word_store()
 
@@ -157,12 +167,13 @@ def handle_cmd_trans(text: str) -> TransActionResult:
         finally:
             progress.update(task_id, total=1, advance=1)
 
-    console.print(format_as_console_table(word))
+    console.print(f'> [bold]中文翻译：[/bold]{word.translated_text}\n')
+    console.print(f'> The word AI has chosen is "[bold]{word.word}[/bold]".\n')
 
     try:
         validate_result_word(word, text)
     except WordInvalidForAdding as e:
-        console.print(f'Unable to add "{word.word}", reason: {e}', style='grey42')
+        console.print(f'Unable to add "{word.word}", reason: {e}', style='red')
         return TransActionResult(
             input_text=text,
             stored_to_voc_book=False,
@@ -171,11 +182,12 @@ def handle_cmd_trans(text: str) -> TransActionResult:
             invalid_for_adding=True,
         )
 
+    console.print(format_single_word(word))
     word_store.add(word)
     console.print(
         (
             f'[bold]"{word.word}"[/bold] was added to your vocabulary book ([bold]{word_store.count()}[/bold] '
-            'in total), well done!'
+            'in total), well done!\n'
         ),
         style='grey42',
     )
@@ -242,7 +254,7 @@ def handle_cmd_no() -> NoActionResult:
     console.print(
         (
             f'[bold]"{word_sample.word}"[/bold] was added to your vocabulary book ([bold]{word_store.count()}[/bold] '
-            'in total), well done!'
+            'in total), well done!\n'
         ),
         style='grey42',
     )
@@ -339,7 +351,7 @@ def handle_cmd_story(words_cnt: int = DEFAULT_WORDS_CNT_FOR_STORY) -> StoryActio
     # Display words on demand
     cmd_obj = StoryCmd(words_cnt)
     if cmd_obj.prompt_view_words():
-        console.print(format(words))
+        console.print(format_words(words))
 
     return StoryActionResult(words=words)
 
@@ -384,14 +396,11 @@ def format_words(words: List[WordSample]) -> Table:
     return table
 
 
-def format_as_console_table(word: WordSample) -> Table:
-    """Format a word sample as rich table"""
-    table = Table(title="翻译结果", show_header=False)
-    table.add_column("title")
-    table.add_column("detail", overflow='fold')
-    table.add_row("[bold]原文[/bold]", f'[grey42]{word.orig_text}[grey42]')
-    table.add_row("[bold]中文翻译[/bold]", word.translated_text)
-    table.add_row("[bold]生词（自动提取）[/bold]", word.word)
-    table.add_row("[bold]释义[/bold]", word.word_meaning)
-    table.add_row("[bold]发音[/bold]", word.pronunciation)
+def format_single_word(word: WordSample) -> Table:
+    """Format a single word sample"""
+    table = Table(title="", show_header=True)
+    table.add_column("单词")
+    table.add_column("发音")
+    table.add_column("释义", overflow='fold')
+    table.add_row(word.word, word.pronunciation, word.word_meaning)
     return table
