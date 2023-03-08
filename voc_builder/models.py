@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -49,3 +50,21 @@ class WordChoice:
         :return: The word string
         """
         return s.split(' / ')[0]
+
+
+@dataclass
+class WordProgress:
+    """Store the learning progress of a word
+
+    :param word: The word itself, for example: "world"
+    :param quiz_cnt: The count of being used for quiz
+    :param ts_date_quiz: The last time it was used for quiz, in UNIX timestamp
+    :param storied_cnt: The count of being used for making story
+    :param ts_date_storied: The last time it was used for making story, in UNIX timestamp
+    """
+
+    word: str
+    quiz_cnt: int = 0
+    ts_date_quiz: Optional[float] = None
+    storied_cnt: int = 0
+    ts_date_storied: Optional[float] = None

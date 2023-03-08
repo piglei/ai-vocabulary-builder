@@ -214,3 +214,27 @@ def parse_word_choices_reply(reply_text: str) -> List[WordChoice]:
     for c in choices:
         c.word = c.word.strip('{}').lower()
     return choices
+
+
+# The prompt being used to generate stroy from words
+prompt_write_story_user_tmpl = """\
+Please write a short story, it must include these words: {words}.
+"""
+
+
+def get_stroy(words: List[WordSample]) -> str:
+    """Query OpenAI to get a story.
+
+    :return: The story text
+    """
+    words_str = ','.join([w.word for w in words])
+    user_content = prompt_word_choices_user_tmpl.format(words=words_str)
+    completion = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            # Use a single "user" message at this moment because "system" role doesn't perform better
+            {"role": "user", "content": user_content},
+        ],
+    )
+    logger.debug('Completion API returns: %s', completion)
+    return completion.choices[0].message.content.strip()

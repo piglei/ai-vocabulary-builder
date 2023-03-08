@@ -28,6 +28,8 @@ console = Console()
 # Special commands
 # no: discard last added word, try to get other options and let user choose from them manually
 COMMAND_NO = 'no'
+# story: make a stroy from least recent used words
+COMMAND_STORY = 'story'
 
 
 class LastActionResult:
@@ -86,6 +88,9 @@ def enter_interactive_mode():
             continue
         elif text == COMMAND_NO:
             handle_cmd_no()
+            continue
+        elif text == COMMAND_STORY:
+            handle_cmd_story()
             continue
 
         LastActionResult.trans_result = handle_cmd_trans(text.strip())
@@ -220,6 +225,16 @@ def handle_cmd_trans(text: str):
         style='grey42',
     )
     return TransActionResult(input_text=text, stored_to_voc_book=True, word_sample=word)
+
+
+def handle_cmd_story():
+    """Handle the "story" command, do following things:
+
+    - Pick 6 words from the vocabulary book, use LRU algo
+    - Write a story use those words
+    """
+    console.print('Under construction')
+    return
 
 
 def validate_result_word(word: WordSample, orig_text: str):
