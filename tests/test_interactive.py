@@ -52,6 +52,24 @@ class TestCmdNo:
         ret = handle_cmd_no()
         assert ret.error == 'last_trans_absent'
 
+    def test_word_invalid(self):
+        """When the word is present but invalid for adding, also allows "no" action"""
+        word_foo = WordSample.make_empty('foo')
+        with mock.patch.object(
+            LastActionResult,
+            'trans_result',
+            TransActionResult(
+                input_text='foo bar',
+                stored_to_voc_book=False,
+                word_sample=word_foo,
+                invalid_for_adding=True,
+            ),
+        ), mock.patch(
+            'voc_builder.interactive.get_word_choices', side_effect=OpenAIServiceError()
+        ):
+            ret = handle_cmd_no()
+            assert ret.error == 'openai_svc_error'
+
     def test_openai_svc_error(self, has_last_added_word):
         with mock.patch(
             'voc_builder.interactive.get_word_choices', side_effect=OpenAIServiceError()

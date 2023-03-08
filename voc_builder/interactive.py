@@ -46,6 +46,7 @@ class TransActionResult:
     :param input_text: The text user has inputted
     :param stored_to_voc_book: whether the word has been added to the vocabulary book
     :param error: The actual error message
+    :param invalid_for_adding: There is a valid word but it's invalid for adding
     :param word_sample: The WordSample object
     """
 
@@ -53,6 +54,7 @@ class TransActionResult:
     stored_to_voc_book: bool
     error: str = ''
     word_sample: Optional[WordSample] = None
+    invalid_for_adding: bool = False
 
 
 @dataclass
@@ -132,6 +134,54 @@ def enter_interactive_mode():
         LastActionResult.trans_result = handle_cmd_trans(text.strip())
 
 
+def handle_cmd_trans(text: str) -> TransActionResult:
+    """Write a new word to the vocabulary book
+
+    :param csv_book_path: The path of vocabulary book
+    """
+    mastered_word_s = get_mastered_word_store()
+    word_store = get_word_store()
+
+    progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API"))
+    orig_words = tokenize_text(text)
+    # Words already in vocabulary book and marked as mastered are treated as "known"
+    known_words = word_store.filter(orig_words) | mastered_word_s.filter(orig_words)
+    with progress:
+        task_id = progress.add_task("get", start=False)
+        try:
+            word = get_word_and_translation(text, known_words)
+        except OpenAIServiceError as e:
+            console.print(f'[red] Error processing text, detail: {e}[red]')
+            logger.debug('Detailed stack trace info: %s', traceback.format_exc())
+            return TransActionResult(input_text=text, stored_to_voc_book=False, error=str(e))
+        finally:
+            progress.update(task_id, total=1, advance=1)
+
+    console.print(format_as_console_table(word))
+
+    try:
+        validate_result_word(word, text)
+    except WordInvalidForAdding as e:
+        console.print(f'Unable to add "{word.word}", reason: {e}', style='grey42')
+        return TransActionResult(
+            input_text=text,
+            stored_to_voc_book=False,
+            error=str(e),
+            word_sample=word,
+            invalid_for_adding=True,
+        )
+
+    word_store.add(word)
+    console.print(
+        (
+            f'[bold]"{word.word}"[/bold] was added to your vocabulary book ([bold]{word_store.count()}[/bold] '
+            'in total), well done!'
+        ),
+        style='grey42',
+    )
+    return TransActionResult(input_text=text, stored_to_voc_book=True, word_sample=word)
+
+
 def handle_cmd_no() -> NoActionResult:
     """Handle the "no" command, do following things:
 
@@ -141,7 +191,7 @@ def handle_cmd_no() -> NoActionResult:
     :return: The action result object.
     """
     ret = LastActionResult.trans_result
-    if not (ret and ret.stored_to_voc_book and ret.word_sample):
+    if not (ret and ret.word_sample and (ret.stored_to_voc_book or ret.invalid_for_adding)):
         console.print(
             'The "no" command was used to remove the last added word and select the word manually.'
         )
@@ -149,7 +199,8 @@ def handle_cmd_no() -> NoActionResult:
         return NoActionResult(error='last_trans_absent')
 
     selector = ManuallySelector()
-    selector.discard_word(ret.word_sample)
+    if not ret.invalid_for_adding:
+        selector.discard_word(ret.word_sample)
 
     progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API"))
     with progress:
@@ -238,48 +289,6 @@ class ManuallySelector:
 
     def prompt_select_word(self, str_choices: List[str]) -> str:
         return questionary.select("Choose the word you don't know", choices=str_choices).ask()
-
-
-def handle_cmd_trans(text: str) -> TransActionResult:
-    """Write a new word to the vocabulary book
-
-    :param csv_book_path: The path of vocabulary book
-    """
-    mastered_word_s = get_mastered_word_store()
-    word_store = get_word_store()
-
-    progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API"))
-    orig_words = tokenize_text(text)
-    # Words already in vocabulary book and marked as mastered are treated as "known"
-    known_words = word_store.filter(orig_words) | mastered_word_s.filter(orig_words)
-    with progress:
-        task_id = progress.add_task("get", start=False)
-        try:
-            word = get_word_and_translation(text, known_words)
-        except OpenAIServiceError as e:
-            console.print(f'[red] Error processing text, detail: {e}[red]')
-            logger.debug('Detailed stack trace info: %s', traceback.format_exc())
-            return TransActionResult(input_text=text, stored_to_voc_book=False, error=str(e))
-        finally:
-            progress.update(task_id, total=1, advance=1)
-
-    console.print(format_as_console_table(word))
-
-    try:
-        validate_result_word(word, text)
-    except WordInvalidForAdding as e:
-        console.print(f'Unable to add "{word.word}", reason: {e}', style='grey42')
-        return TransActionResult(input_text=text, stored_to_voc_book=False, error=str(e))
-
-    word_store.add(word)
-    console.print(
-        (
-            f'[bold]"{word.word}"[/bold] was added to your vocabulary book ([bold]{word_store.count()}[/bold] '
-            'in total), well done!'
-        ),
-        style='grey42',
-    )
-    return TransActionResult(input_text=text, stored_to_voc_book=True, word_sample=word)
 
 
 DEFAULT_WORDS_CNT_FOR_STORY = 6
