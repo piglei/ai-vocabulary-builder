@@ -162,7 +162,9 @@ def handle_cmd_trans(text: str) -> TransActionResult:
         except OpenAIServiceError as e:
             console.print(f'[red] Error processing text, detail: {e}[red]')
             logger.debug('Detailed stack trace info: %s', traceback.format_exc())
-            return TransActionResult(input_text=text, stored_to_voc_book=False, error=str(e))
+            return TransActionResult(
+                input_text=text, stored_to_voc_book=False, error='openai_svc_error'
+            )
         finally:
             progress.update(task_id, total=1, advance=1)
 

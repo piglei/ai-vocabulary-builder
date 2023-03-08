@@ -1,11 +1,13 @@
 """Main entrance of AI Vocabulary Builder"""
 import logging
 import sys
-from typing import Optional
+from typing import Optional, List
 
+from rich.console import Console
 import click
 import openai
 
+from voc_builder import __version__
 from voc_builder.commands.export import FormatType, handle_export
 from voc_builder.commands.remove import handle_remove
 from voc_builder.interactive import enter_interactive_mode, handle_cmd_trans
@@ -16,12 +18,23 @@ logging.basicConfig(format=log_format, level=logging.DEBUG)
 
 logger = logging.getLogger()
 
+console = Console()
+
 
 @click.group(invoke_without_command=True)
 @click.pass_context
 def main(ctx):
     if ctx.invoked_subcommand is None:
         return run()
+
+
+@main.command(help='Show version info')
+def version():
+    console = Console()
+    console.print(
+        'Welcome to use "AI vocabulary builder", this is a product made by [bold]@piglei[/bold] with love.'
+    )
+    console.print(f'Version: {__version__}')
 
 
 @main.command(help='Start the interactive shell')
@@ -68,13 +81,13 @@ def export(format: str, file_path: Optional[str]):
 
 @main.command(help='Remove words from your vocabulary book')
 @click.option(
-    '--remove-only',
+    '--hard-remove',
     type=bool,
     default=False,
     help='Only perform remove, do not mark the deleted words into "mastered words"(the default behaviour)',
 )
-@click.argument('words', nargs=-1, help='The words to be removed')
-def remove(hard_remove: bool, words):
+@click.argument('words', nargs=-1)
+def remove(hard_remove: bool, words: List[str]):
     handle_remove(words, hard_remove)
 
 

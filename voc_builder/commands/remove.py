@@ -19,9 +19,13 @@ def handle_remove(words: List[str], hard_remove: bool):
     for w in words:
         if hard_remove:
             w_ret = word_store.remove(w)
-            mword_store.remove(w)
+            m_ret = mword_store.remove(w)
             if w_ret:
                 console.print(f'[bold]"{w}"[/bold] has been removed.', style='blue')
+            elif m_ret:
+                console.print(
+                    f'[bold]"{w}"[/bold] has been removed form "mastered words".', style='blue'
+                )
             else:
                 console.print(f'[bold]"{w}"[/bold] not found.', style='red')
             continue
@@ -29,6 +33,6 @@ def handle_remove(words: List[str], hard_remove: bool):
         w_ret = word_store.remove(w)
         if w_ret:
             mword_store.add(w)
-            console.print(f'"[bold]"{w}"[/bold] has been added to "masted words".', style='blue')
+            console.print(f'[bold]"{w}"[/bold] has been added to "masted words.', style='blue')
         else:
-            console.print(f'"[bold]"{w}"[/bold] not found".', style='red')
+            console.print(f'[bold]"{w}"[/bold] not found.', style='red')

@@ -22,14 +22,25 @@ OPENAI_REPLY_QUERY = 'word: world\npronunciation: wɔːld\nmeaning: 世界\ntran
 class TestCmdTrans:
     def test_known_words(self, tmp_path):
         """Check if known words from all sources works"""
+        with mock.patch('voc_builder.openai_svc.query_openai', side_effect=OpenAIServiceError()):
+            ret = handle_cmd_trans("foo bar baz!")
+            assert ret.stored_to_voc_book is False
+            assert ret.error == 'openai_svc_error'
+
+    def test_normal(self, tmp_path):
+        """Check if known words from all sources works"""
         # Update known words from both sources
         get_word_store().add(WordSample.make_empty('foo'))
         get_mastered_word_store().add('baz')
 
         with mock.patch('voc_builder.openai_svc.query_openai') as mocked_query:
             mocked_query.return_value = OPENAI_REPLY_QUERY
-            handle_cmd_trans("foo bar baz!")
-            mocked_query.assert_called_once_with("foo bar baz!", {'foo', 'baz'})
+            ret = handle_cmd_trans("world foo bar baz!")
+
+            mocked_query.assert_called_once_with("world foo bar baz!", {'foo', 'baz'})
+            assert ret.stored_to_voc_book is True
+            assert ret.word_sample and ret.word_sample.word == 'world'
+            assert get_word_store().exists('world') is True
 
 
 class TestCmdNo:
