@@ -11,13 +11,17 @@ AI 生词本（“AI Vocabulary Builder” 简称 aivoc）是一个利用了 AI 
 
 工具截图：
 
-<img width="1033" alt="image" src="https://user-images.githubusercontent.com/731266/223053513-4cc3896e-00d2-41b7-b40a-7074a9d2db2c.png">
+<img width="764" alt="image" src="https://user-images.githubusercontent.com/731266/223868557-df07cd17-504a-4dc7-8fd9-cf67e53704c7.png">
 
-↑ 交互式使用界面
+↑ 交互式翻译，自动提取生词
 
-<img width="931" alt="image" src="https://user-images.githubusercontent.com/731266/222906216-3ae12bfd-8404-4cc4-b50c-1ff47d8d1e61.png">
+<img width="784" alt="image" src="https://user-images.githubusercontent.com/731266/223868671-8093846e-ca58-4e15-9f4f-0bc0c76f16be.png">
 
-↑ 使用 numbers 打开生词库表格（使用 CSV 纯文本格式，方便二次处理）
+↑ 通过阅读故事，牢固掌握生词
+
+<img width="703" alt="image" src="https://user-images.githubusercontent.com/731266/223868925-71e8ac34-8ea5-4d72-b017-2ec22b0678b8.png">
+
+↑ 可导出生词库表格（使用 CSV 纯文本格式，方便二次处理）
 
 ## 快速开始
 
