@@ -13,4 +13,4 @@ def setup_config(tmp_path):
 
 @pytest.fixture
 def w_sample_world() -> WordSample:
-    return WordSample('world', '世界', 'wɔrld', 'Hello, world!', '你好，世界！')
+    return WordSample('world', 'world', '世界', 'wɔrld', 'Hello, world!', '你好，世界！')

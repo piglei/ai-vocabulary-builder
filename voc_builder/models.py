@@ -7,6 +7,7 @@ class WordSample:
     """A word sample which is ready to be added into a vocabulary book
 
     :param word: The word itself, for example: "world"
+    :param word_normal: The normal form of the given word, `None` means unknown
     :param word_meaning: The Chinese meaning of the word
     :param pronunciation: The pronunciation of the word, "/wɔrld/"
     :param orig_text: The original text
@@ -14,6 +15,7 @@ class WordSample:
     """
 
     word: str
+    word_normal: Optional[str]
     word_meaning: str
     pronunciation: str
     orig_text: str
@@ -22,7 +24,19 @@ class WordSample:
     @classmethod
     def make_empty(cls, word: str) -> 'WordSample':
         """Make an empty object which use "word" field only, other fields are set to empty."""
-        return cls(word, '', '', '', '')
+        return cls(word, word, '', '', '', '')
+
+    def get_word_meaning_display(self) -> str:
+        """Get the word_meaning field for display purpose, will add extra info"""
+        if self.word_normal and self.word_normal != self.word:
+            return f"{self.word_meaning}（原词：{self.word_normal}）"
+        return self.word_meaning
+
+    def get_normal_word_display(self) -> str:
+        """Try to display current word with the normal form comes first"""
+        if self.word_normal and self.word_normal != self.word:
+            return f'{self.word_normal}({self.word})'
+        return self.word
 
 
 @dataclass
@@ -30,17 +44,22 @@ class WordChoice:
     """A word for choice
 
     :param word: The word itself, for example: "world"
+    :param word_normal: The normal form of the given word
     :param word_meaning: The Chinese meaning of the word
     :param pronunciation: The pronunciation of the word, "/wɔrld/"
     """
 
     word: str
+    word_normal: str
     word_meaning: str
     pronunciation: str
 
     def get_console_display(self) -> str:
         """A more detailed format"""
-        return f'{self.word} / {self.pronunciation.strip("/")} / {self.word_meaning}'
+        if self.word == self.word_normal:
+            return f'{self.word} / {self.pronunciation.strip("/")} / {self.word_meaning}'
+        else:
+            return f'{self.word} / （原词：{self.word_normal}） / {self.pronunciation.strip("/")} / {self.word_meaning}'
 
     @classmethod
     def extract_word(cls, s: str) -> str:
@@ -68,3 +87,13 @@ class WordProgress:
     ts_date_quiz: Optional[float] = None
     storied_cnt: int = 0
     ts_date_storied: Optional[float] = None
+
+
+@dataclass
+class TranslationResult:
+    """The result of a successful translation
+
+    :param word_sample: The WordSample object
+    """
+
+    word_sample: WordSample
