@@ -30,7 +30,7 @@ def get_word_and_translation(text: str, known_words: Set[str]) -> TranslationRes
 
 # The prompt being used to make word
 prompt_main_system = """\
-You are a translation assistant, I will give you a sentence and a list of words called "known-words" which is divided by ",", please find out the single most rarely used word in the sentence(the word must not in "known-words"). Get the normal form, the simplified Chinese meaning and the pronunciation of that word, then translate the whole sentence into simplified Chinese.
+You are a translation assistant, I will give you a sentence and a list of words called "known-words" which is divided by ",", please find out the top 1 most rarely used word in the sentence(the word must not in "known-words"). Get the normal form, the simplified Chinese meaning and the pronunciation of that word, then translate the whole sentence into simplified Chinese.
 
 Your answer should be separated into 5 different lines, each line's content is as below:
 
@@ -229,7 +229,7 @@ def parse_word_choices_reply(reply_text: str) -> List[WordChoice]:
 
 # The prompt being used to generate stroy from words
 prompt_write_story_user_tmpl = """\
-Please write a short story which is less than 200 words, the story should use simple words and these words must be included: {words}.
+Please write a short story which is less than 200 words, the story should use simple words and these special words must be included: {words}. Also replace every special word with "$${{word}}$$".
 """  # noqa: E501
 
 
@@ -239,7 +239,8 @@ def get_story(words: List[WordSample]) -> str:
     :return: The story text
     :raise: VocBuilderError
     """
-    words_str = ','.join([w.word for w in words])
+    # Try to use the normal form of each word
+    words_str = ','.join([w.word_normal or w.word for w in words])
     user_content = prompt_write_story_user_tmpl.format(words=words_str)
     try:
         completion = openai.ChatCompletion.create(

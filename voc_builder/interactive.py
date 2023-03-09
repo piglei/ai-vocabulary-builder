@@ -19,7 +19,7 @@ from voc_builder.exceptions import OpenAIServiceError, WordInvalidForAdding
 from voc_builder.models import WordChoice, WordSample
 from voc_builder.openai_svc import get_story, get_word_and_translation, get_word_choices
 from voc_builder.store import get_mastered_word_store, get_word_store
-from voc_builder.utils import highlight_words, tokenize_text
+from voc_builder.utils import highlight_words, tokenize_text, highlight_story_text
 
 logger = logging.getLogger()
 console = Console()
@@ -330,8 +330,8 @@ def handle_cmd_story(words_cnt: int = DEFAULT_WORDS_CNT_FOR_STORY) -> StoryActio
         )
         return StoryActionResult(error='not_enough_words')
 
-    # Call OpenAI service to get story text
-    words_str = [w.word for w in words]
+    # Call OpenAI service to get story text, word's normal form is preferred
+    words_str = [w.get_normal_word_display() or w.word for w in words]
     console.print('Words for generating story: [bold]{}[/bold]'.format(', '.join(words_str)))
     progress = Progress(
         SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API to write the story...")
@@ -348,7 +348,7 @@ def handle_cmd_story(words_cnt: int = DEFAULT_WORDS_CNT_FOR_STORY) -> StoryActio
             progress.update(task_id, total=1, advance=1)
 
     # Display the story and update words to make LRU work
-    console.print(Panel(highlight_words(story_text, words_str), title='Enjoy your reading'))
+    console.print(Panel(highlight_story_text(story_text), title='Enjoy your reading'))
     word_store.update_story_words(words)
 
     # Display words on demand
@@ -393,7 +393,7 @@ def format_words(words: List[WordSample]) -> Table:
         table.add_row(
             w.word,
             w.pronunciation,
-            w.word_meaning,
+            w.get_word_meaning_display(),
             highlight_words(w.orig_text, [w.word]) + '\n' + w.translated_text,
         )
     return table

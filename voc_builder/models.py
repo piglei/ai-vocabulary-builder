@@ -32,6 +32,12 @@ class WordSample:
             return f"{self.word_meaning}（原词：{self.word_normal}）"
         return self.word_meaning
 
+    def get_normal_word_display(self) -> str:
+        """Try to display current word with the normal form comes first"""
+        if self.word_normal and self.word_normal != self.word:
+            return f'{self.word_normal}({self.word})'
+        return self.word
+
 
 @dataclass
 class WordChoice:

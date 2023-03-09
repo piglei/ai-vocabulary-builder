@@ -12,3 +12,11 @@ def highlight_words(text: str, words: Sequence[str]) -> str:
     """Find all occurrences of the given words in text, make them highlighted"""
     pattern = r'\b({})\b'.format('|'.join(words))
     return re.sub(pattern, r'[bold][underline]\1[/underline][/bold]', text, flags=re.IGNORECASE)
+
+
+def highlight_story_text(text: str) -> str:
+    """Find all special words in the story text, make them highlighted.
+    All special words are in this format: "$${...}$$"
+    """
+    pattern = r'\$\${?(.*?)}?\$\$'
+    return re.sub(pattern, r'[bold][underline]\1[/underline][/bold]', text, flags=re.IGNORECASE)
