@@ -190,6 +190,8 @@ class WordStore:
     @staticmethod
     def _to_detailed_obj(d: Dict) -> WordDetailedObj:
         """Turn raw JSON data into WordDetailedObj object."""
+        # Handle data <= 0.2.0 version
+        d['ws'].setdefault('word_normal', None)
         return WordDetailedObj(
             ws=WordSample(**d['ws']),
             wp=WordProgress(**d['wp']),

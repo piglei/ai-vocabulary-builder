@@ -58,7 +58,7 @@ def build_ascii_table() -> Table:
             str(i),
             w.word,
             w.ws.pronunciation,
-            w.ws.word_meaning,
+            w.ws.get_word_meaning_display(),
             highlight_words(w.ws.orig_text, [w.word]) + '\n' + w.ws.translated_text,
             w.date_added,
         )
@@ -82,7 +82,7 @@ class VocCSVWriter:
                     str(i),
                     w.word,
                     w.ws.pronunciation,
-                    w.ws.word_meaning,
+                    w.ws.get_word_meaning_display(),
                     '{} / {}'.format(w.ws.orig_text, w.ws.translated_text),
                     w.date_added,
                 )

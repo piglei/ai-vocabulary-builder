@@ -1,4 +1,9 @@
-from voc_builder.models import WordSample
+import time
+from dataclasses import asdict
+
+from tinydb import Query
+
+from voc_builder.models import WordProgress, WordSample
 from voc_builder.store import MasteredWordStore, WordStore
 
 
@@ -71,3 +76,30 @@ class TestWordStore:
         word_store.add(WordSample.make_empty('program'))
         word_store.add(WordSample.make_empty('python'))
         assert word_store.filter({'foo', 'python', 'bar'}) == {'python'}
+
+
+class TestDifferentWordVersion:
+    """Test if the word store is able to handle data in legacy versions"""
+
+    def test_get_without_word_normal_form(self, tmp_path):
+        """Test word without "word_normal_form" field(version <= 0.2.0)"""
+        word_store = WordStore(tmp_path / 'foo.json')
+        Word = Query()
+        data = {
+            'word': 'program',
+            'word_meaning': '',
+            'pronunciation': '',
+            'orig_text': '',
+            'translated_text': '',
+        }
+        word_store._db.upsert(
+            {
+                'ws': data,
+                'wp': asdict(WordProgress(word=data['word'])),
+                'ts_date_added': time.time(),
+            },
+            Word.ws.word == data['word'],
+        )
+        obj = word_store.get('program')
+        assert obj and obj.word == 'program'
+        assert len(list(word_store.all())) == 1

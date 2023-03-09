@@ -16,7 +16,9 @@ from voc_builder.models import WordChoice, WordSample
 from voc_builder.store import get_mastered_word_store, get_word_store
 
 # A valid OpenAI reply example for text translating
-OPENAI_REPLY_QUERY = 'word: world\npronunciation: wɔːld\nmeaning: 世界\ntranslated: 你好，世界。'
+OPENAI_REPLY_QUERY = (
+    'word: world\nnormal_form: world\npronunciation: wɔːld\nmeaning: 世界\ntranslated: 你好，世界。'
+)
 
 
 class TestCmdTrans:
@@ -98,7 +100,9 @@ class TestCmdNo:
     def test_user_skip_error(self, has_last_added_word):
         with mock.patch(
             'voc_builder.interactive.get_word_choices',
-            return_value=[WordChoice(word='bar', word_meaning='bar', pronunciation='')],
+            return_value=[
+                WordChoice(word='bar', word_normal='bar', word_meaning='bar', pronunciation='')
+            ],
         ), mock.patch(
             'voc_builder.interactive.ManuallySelector.prompt_select_word',
             return_value=ManuallySelector.choice_skip,
@@ -109,7 +113,9 @@ class TestCmdNo:
     def test_validate_error(self, has_last_added_word):
         with mock.patch(
             'voc_builder.interactive.get_word_choices',
-            return_value=[WordChoice(word='bar', word_meaning='bar', pronunciation='')],
+            return_value=[
+                WordChoice(word='bar', word_normal='bar', word_meaning='bar', pronunciation='')
+            ],
         ), mock.patch(
             'voc_builder.interactive.ManuallySelector.prompt_select_word',
             return_value='bar',
@@ -122,7 +128,9 @@ class TestCmdNo:
     def test_normal(self, has_last_added_word):
         with mock.patch(
             'voc_builder.interactive.get_word_choices',
-            return_value=[WordChoice(word='bar', word_meaning='bar', pronunciation='')],
+            return_value=[
+                WordChoice(word='bar', word_normal='bar', word_meaning='bar', pronunciation='')
+            ],
         ), mock.patch(
             'voc_builder.interactive.ManuallySelector.prompt_select_word',
             return_value='bar',

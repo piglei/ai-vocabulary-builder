@@ -4,12 +4,12 @@ from typing import Dict, List, Set, Tuple
 import openai
 
 from voc_builder.exceptions import OpenAIServiceError
-from voc_builder.models import WordChoice, WordSample
+from voc_builder.models import TranslationResult, WordChoice, WordSample
 
 logger = logging.getLogger()
 
 
-def get_word_and_translation(text: str, known_words: Set[str]) -> WordSample:
+def get_word_and_translation(text: str, known_words: Set[str]) -> TranslationResult:
     """Get the most uncommon word in the given text, the result also include other
     information such as meaning of the word and etc.
 
@@ -30,20 +30,18 @@ def get_word_and_translation(text: str, known_words: Set[str]) -> WordSample:
 
 # The prompt being used to make word
 prompt_main_system = """\
-You are a translation assistant, I will give you a sentence and a list of words called "known-words" which is divided
-by ",", please find out the most rarely used word in the sentence(the word must not in "known-words"),
-get the simplified Chinese meaning and the pronunciation of that word and translate
-the whole sentence into simplified Chinese.
+You are a translation assistant, I will give you a sentence and a list of words called "known-words" which is divided by ",", please find out the single most rarely used word in the sentence(the word must not in "known-words"). Get the normal form, the simplified Chinese meaning and the pronunciation of that word, then translate the whole sentence into simplified Chinese.
 
-Your answer should be separated into 4 different lines, each line's content is as below:
+Your answer should be separated into 5 different lines, each line's content is as below:
 
-- word: {{word}}
-- pronunciation: {{pronunciation}}
-- meaning: {{chinese_meaning_of_word}}
-- translated: {{translated_sentence}}
+word: {{word}}
+normal_form: {{normal_form_of_word}}
+pronunciation: {{pronunciation}}
+meaning: {{chinese_meaning_of_word}}
+translated: {{translated_sentence}}
 
-The answer should have no extra content.
-"""
+The answer should only include 1 word and have no extra content.
+"""  # noqa: E501
 
 prompt_main_user_tmpl = """\
 known-words: {known_words}
@@ -73,12 +71,12 @@ def query_openai(text: str, known_words: Set[str]) -> str:
     return completion.choices[0].message.content.strip()
 
 
-def parse_openai_reply(reply_text: str, orig_text: str) -> WordSample:
+def parse_openai_reply(reply_text: str, orig_text: str) -> TranslationResult:
     """Parse the OpenAI reply into WorkSample
 
     :param reply_text: Formatted text
     :param orig_text: The original text which needs translation
-    :return: WordSample object
+    :return: TranslationResult object
     :raise: ValueError when the given reply text can not be parsed
     """
     # Get the key value pairs from text first
@@ -93,6 +91,7 @@ def parse_openai_reply(reply_text: str, orig_text: str) -> WordSample:
     #   {field_name}: {list_of_possible_keys}
     possible_field_index: Dict[str, List[str]] = {
         'word': ['word', 'unknown-word', 'unknown word'],
+        'word_normal': ['normal_form'],
         'word_meaning': ['meaning'],
         'pronunciation': ['pronunciation'],
         'translated_text': ['translated'],
@@ -114,7 +113,18 @@ def parse_openai_reply(reply_text: str, orig_text: str) -> WordSample:
 
     # The word was surrounded by {} sometimes, remove
     fields['word'] = fields['word'].strip('{}').lower()
-    return WordSample(orig_text=orig_text, **fields)
+    # Preserve case for normal form
+    fields['word_normal'] = fields['word_normal'].strip('{}')
+    return TranslationResult(
+        word_sample=WordSample(
+            word=fields['word'],
+            word_normal=fields['word_normal'],
+            word_meaning=fields['word_meaning'],
+            pronunciation=fields['pronunciation'],
+            translated_text=fields['translated_text'],
+            orig_text=orig_text,
+        ),
+    )
 
 
 def get_word_choices(text: str, known_words: Set[str]) -> List[WordChoice]:
@@ -130,18 +140,17 @@ def get_word_choices(text: str, known_words: Set[str]) -> List[WordChoice]:
 
 
 # The prompt being used to extract multiple words
-prompt_word_choices_system = '''\
-You are a translation assistant, I will give you a sentence and a list of words called "known-words" which is divided
-by ",", please find out the top 3 rarely used word in the sentence(the word must not in "known-words"),
-get the simplified Chinese meaning and the pronunciation of each word.
+prompt_word_choices_system = """You are a translation assistant, I will give you a sentence and a list of words called "known-words" which is divided by ",", please find out the top 3 rarely used word in the sentence(the word must not in "known-words"). Get the normal form, the simplified Chinese meaning and the pronunciation of each word.
 
-For each word, your answer should be separated into 3 different lines, each line's content is as below:
+For each word, your answer should be separated into 4 different lines, each line's content is as below:
 
-- word: {{word}}
-- pronunciation: {{pronunciation}}
-- meaning: {{chinese_meaning_of_word}}
+word: {{word}}
+normal_form: {{normal_form_of_word}}
+pronunciation: {{pronunciation}}
+meaning: {{chinese_meaning_of_word}}
 
-The answer should have no extra content.'''
+The answer should only include 3 word, have no extra content.
+"""  # noqa: E501
 
 prompt_word_choices_user_tmpl = """\
 known-words: {known_words}
@@ -203,7 +212,9 @@ def parse_word_choices_reply(reply_text: str) -> List[WordChoice]:
             continue
         if key == 'meaning':
             current_choice['word_meaning'] = value
-        if key == 'pronunciation':
+        elif key == 'normal_form':
+            current_choice['word_normal'] = value
+        elif key == 'pronunciation':
             current_choice['pronunciation'] = value
 
     # Push the last word in to result list
@@ -218,9 +229,8 @@ def parse_word_choices_reply(reply_text: str) -> List[WordChoice]:
 
 # The prompt being used to generate stroy from words
 prompt_write_story_user_tmpl = """\
-Please write a short story which is less than 200 words, the story should use
-simple words and these words must be included: {words}.
-"""
+Please write a short story which is less than 200 words, the story should use simple words and these words must be included: {words}.
+"""  # noqa: E501
 
 
 def get_story(words: List[WordSample]) -> str:

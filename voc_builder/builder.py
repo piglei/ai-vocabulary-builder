@@ -33,6 +33,7 @@ class VocBuilderCSVFile:
                 t, tran_t = row['例句/翻译'].split(' / ', 1)
                 w = WordSample(
                     word=row['单词'],
+                    word_normal=None,
                     word_meaning=row['释义'],
                     pronunciation=row['读音'],
                     orig_text=t,

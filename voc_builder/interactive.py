@@ -158,7 +158,7 @@ def handle_cmd_trans(text: str) -> TransActionResult:
     with progress:
         task_id = progress.add_task("get", start=False)
         try:
-            word = get_word_and_translation(text, known_words)
+            trans_ret = get_word_and_translation(text, known_words)
         except OpenAIServiceError as e:
             console.print(f'[red] Error processing text, detail: {e}[red]')
             logger.debug('Detailed stack trace info: %s', traceback.format_exc())
@@ -168,6 +168,7 @@ def handle_cmd_trans(text: str) -> TransActionResult:
         finally:
             progress.update(task_id, total=1, advance=1)
 
+    word = trans_ret.word_sample
     console.print(f'> [bold]中文翻译：[/bold]{word.translated_text}\n')
     console.print(f'> The word AI has chosen is "[bold]{word.word}[/bold]".\n')
 
@@ -238,6 +239,7 @@ def handle_cmd_no() -> NoActionResult:
 
     word_sample = WordSample(
         word=choice.word,
+        word_normal=choice.word_normal,
         word_meaning=choice.word_meaning,
         pronunciation=choice.pronunciation,
         translated_text=ret.word_sample.translated_text,
@@ -398,10 +400,13 @@ def format_words(words: List[WordSample]) -> Table:
 
 
 def format_single_word(word: WordSample) -> Table:
-    """Format a single word sample"""
+    """Format a single word sample
+
+    :parm word: The word sample object
+    """
     table = Table(title="", show_header=True)
     table.add_column("单词")
     table.add_column("发音")
     table.add_column("释义", overflow='fold')
-    table.add_row(word.word, word.pronunciation, word.word_meaning)
+    table.add_row(word.word, word.pronunciation, word.get_word_meaning_display())
     return table
