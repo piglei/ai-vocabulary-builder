@@ -135,10 +135,14 @@ def enter_interactive_mode():
             LastActionResult.story_result = handle_cmd_story()
             continue
 
-        LastActionResult.trans_result = handle_cmd_trans(text.strip())
+        trans_ret = handle_cmd_trans(text.strip())
+        # Don't store error of input invalid type
+        if trans_ret.error != 'input_length_invalid':
+            LastActionResult.trans_result = trans_ret
 
 
 MIN_LENGTH_TRANS_TEXT = 12
+MAX_LENGTH_TRANS_TEXT = 1600
 
 
 def handle_cmd_trans(text: str) -> TransActionResult:
@@ -146,13 +150,24 @@ def handle_cmd_trans(text: str) -> TransActionResult:
 
     :param csv_book_path: The path of vocabulary book
     """
+    # Validate input length
     if len(text) < MIN_LENGTH_TRANS_TEXT:
         console.print(
             f'Content too short, input at least {MIN_LENGTH_TRANS_TEXT} characters to start a translation.',
+            style='red',
         )
         return TransActionResult(
-            input_text=text, stored_to_voc_book=False, error='input_too_short'
+            input_text=text, stored_to_voc_book=False, error='input_length_invalid'
         )
+    if len(text) > MAX_LENGTH_TRANS_TEXT:
+        console.print(
+            f'Content too long, input at most {MAX_LENGTH_TRANS_TEXT} characters to start a translation.',
+            style='red',
+        )
+        return TransActionResult(
+            input_text=text, stored_to_voc_book=False, error='input_length_invalid'
+        )
+
     mastered_word_s = get_mastered_word_store()
     word_store = get_word_store()
 
