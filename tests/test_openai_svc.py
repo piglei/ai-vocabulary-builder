@@ -1,7 +1,7 @@
 import pytest
 
 from voc_builder.models import TranslationResult, WordChoice, WordSample
-from voc_builder.openai_svc import parse_openai_reply, parse_word_choices_reply
+from voc_builder.openai_svc import TranslationReplyParser, parse_word_choices_reply
 
 word_sample_hello = WordSample(
     word='world',
@@ -37,40 +37,51 @@ translated: 你好，世界。
 other info'''
 
 
-@pytest.mark.parametrize(
-    'orig_text,input,expected',
-    [
-        # A standard reply
-        (
-            'Hello, world.',
-            _reply_standard,
-            TranslationResult(word_sample=word_sample_hello),
-        ),
-        # A reply using non-standard key name
-        (
-            'Hello, world.',
-            _reply_non_standard_key_name,
-            TranslationResult(word_sample=word_sample_hello),
-        ),
-        # A reply which has extra content in the beginning and the end
-        (
-            'Hello, world.',
-            _reply_with_extra_content,
-            TranslationResult(word_sample=word_sample_hello),
-        ),
-        (
-            'Hello, world.',
-            'invalid reply',
-            None,
-        ),
-    ],
-)
-def test_parse_openai_reply(orig_text, input, expected):
-    if expected is None:
-        with pytest.raises(ValueError):
-            parse_openai_reply(input, orig_text)
-    else:
-        assert parse_openai_reply(input, orig_text) == expected
+class TestTranslationReplyParser:
+    @pytest.mark.parametrize(
+        'orig_text,input,expected',
+        [
+            # A standard reply
+            (
+                'Hello, world.',
+                _reply_standard,
+                TranslationResult(word_sample=word_sample_hello),
+            ),
+            # A reply using non-standard key name
+            (
+                'Hello, world.',
+                _reply_non_standard_key_name,
+                TranslationResult(word_sample=word_sample_hello),
+            ),
+            # A reply which has extra content in the beginning and the end
+            (
+                'Hello, world.',
+                _reply_with_extra_content,
+                TranslationResult(word_sample=word_sample_hello),
+            ),
+            (
+                'Hello, world.',
+                'invalid reply',
+                None,
+            ),
+        ],
+    )
+    def test_parse(self, orig_text, input, expected):
+        if expected is None:
+            with pytest.raises(ValueError):
+                TranslationReplyParser().parse(input, orig_text)
+        else:
+            assert TranslationReplyParser().parse(input, orig_text) == expected
+
+    @pytest.mark.parametrize(
+        'reply_text,expected',
+        [
+            ('Invalid reply', ''),
+            ('foo\ntranslated: bar', 'bar'),
+        ],
+    )
+    def test_extract_translated(self, reply_text, expected):
+        assert TranslationReplyParser().extract_translated(reply_text) == expected
 
 
 _reply_words_standard = '''\

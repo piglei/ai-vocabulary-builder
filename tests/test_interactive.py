@@ -29,6 +29,12 @@ class TestCmdTrans:
             assert ret.stored_to_voc_book is False
             assert ret.error == 'openai_svc_error'
 
+    def test_openai_svc_error(self, tmp_path):
+        """Test when there's an error calling the OpenAI API"""
+        with mock.patch('voc_builder.openai_svc.query_openai', side_effect=OpenAIServiceError()):
+            ret = handle_cmd_trans("world foo bar baz!")
+            assert ret.error == 'openai_svc_error'
+
     def test_normal(self, tmp_path):
         """Check if known words from all sources works"""
         # Update known words from both sources
@@ -39,7 +45,7 @@ class TestCmdTrans:
             mocked_query.return_value = OPENAI_REPLY_QUERY
             ret = handle_cmd_trans("world foo bar baz!")
 
-            mocked_query.assert_called_once_with("world foo bar baz!", {'foo', 'baz'})
+            assert mocked_query.call_args[0] == ("world foo bar baz!", {'foo', 'baz'})
             assert ret.stored_to_voc_book is True
             assert ret.word_sample and ret.word_sample.word == 'world'
             assert get_word_store().exists('world') is True
@@ -150,17 +156,15 @@ class TestCmdStory:
 
     def test_openai_svc_error(self):
         get_word_store().add(WordSample.make_empty('foo'))
-        with mock.patch(
-            'voc_builder.interactive.get_story', side_effect=OpenAIServiceError()
-        ) as mocker:
+        with mock.patch('voc_builder.openai_svc.query_story', side_effect=IOError()) as mocker:
             ret = handle_cmd_story(1)
             assert ret.error == 'openai_svc_error'
-            mocker.assert_called_once_with([WordSample.make_empty('foo')])
+            assert mocker.call_args[0][0] == ['foo']
 
     def test_normal(self):
         get_word_store().add(WordSample.make_empty('foo'))
         with mock.patch(
-            'voc_builder.interactive.get_story', return_value='story text'
+            'voc_builder.openai_svc.query_story', return_value='story text'
         ), mock.patch('voc_builder.interactive.StoryCmd.prompt_view_words', return_value=True):
             ret = handle_cmd_story(1)
             word = get_word_store().get('foo')

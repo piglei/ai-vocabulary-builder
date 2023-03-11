@@ -1,8 +1,10 @@
 """Functions relative with the interactive REPL"""
 import logging
+import time
 import traceback
 from dataclasses import dataclass, field
 from textwrap import dedent
+from threading import Thread
 from typing import ClassVar, List, Optional
 
 import questionary
@@ -10,16 +12,19 @@ from prompt_toolkit import prompt
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.styles import Style
 from rich.console import Console
+from rich.live import Live
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.spinner import Spinner
 from rich.table import Table
+from rich.text import Text
 
 from voc_builder.builder import migrate_builder_data_to_store
 from voc_builder.exceptions import OpenAIServiceError, WordInvalidForAdding
-from voc_builder.models import WordChoice, WordSample
+from voc_builder.models import LiveStoryInfo, LiveTranslationInfo, WordChoice, WordSample
 from voc_builder.openai_svc import get_story, get_word_and_translation, get_word_choices
 from voc_builder.store import get_mastered_word_store, get_word_store
-from voc_builder.utils import highlight_words, tokenize_text, highlight_story_text
+from voc_builder.utils import highlight_story_text, highlight_words, tokenize_text
 
 logger = logging.getLogger()
 console = Console()
@@ -151,25 +156,26 @@ def handle_cmd_trans(text: str) -> TransActionResult:
     mastered_word_s = get_mastered_word_store()
     word_store = get_word_store()
 
-    progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API"))
     orig_words = tokenize_text(text)
     # Words already in vocabulary book and marked as mastered are treated as "known"
     known_words = word_store.filter(orig_words) | mastered_word_s.filter(orig_words)
-    with progress:
-        task_id = progress.add_task("get", start=False)
+
+    with Live(refresh_per_second=LiveTransRenderer.frames_per_second) as live:
+        live_renderer = LiveTransRenderer(live)
+        live_renderer.run(text)
         try:
-            trans_ret = get_word_and_translation(text, known_words)
+            trans_ret = get_word_and_translation(text, known_words, live_renderer.live_info)
+            live_renderer.block_until_finished()
         except OpenAIServiceError as e:
             console.print(f'[red] Error processing text, detail: {e}[red]')
             logger.debug('Detailed stack trace info: %s', traceback.format_exc())
             return TransActionResult(
                 input_text=text, stored_to_voc_book=False, error='openai_svc_error'
             )
-        finally:
-            progress.update(task_id, total=1, advance=1)
 
-    word = trans_ret.word_sample
-    console.print(f'> [bold]中文翻译：[/bold]{word.translated_text}\n')
+        word = trans_ret.word_sample
+        live.update(gen_translated_table(text, word.translated_text, word.word))
+
     console.print(f'> The word AI has chosen is "[bold]{word.word}[/bold]".\n')
 
     try:
@@ -194,6 +200,70 @@ def handle_cmd_trans(text: str) -> TransActionResult:
         style='grey42',
     )
     return TransActionResult(input_text=text, stored_to_voc_book=True, word_sample=word)
+
+
+class LiveTransRenderer:
+    """Render live translation result
+
+    :param live_display: Live display component from rich
+    """
+
+    frames_per_second = 12
+
+    def __init__(self, live_display: Live) -> None:
+        self.spinner = Spinner('dots')
+        self.live_display = live_display
+        self.live_info = LiveTranslationInfo()
+        self._thread = None
+
+    def run(self, text: str):
+        """Start a background thread to update the live display, this thread is required
+        because the "loading" animation has to be rendered at a steady pace.
+
+        :param text: The original text
+        """
+        self.live_thread = Thread(target=self._run, args=(text,))
+        self.live_thread.start()
+
+    def _run(self, text: str):
+        """A loop function which render the translation result repeatedly."""
+        while not self.live_info.is_finished:
+            time.sleep(1 / self.frames_per_second)
+            self.live_display.update(self._gen_table(text, self.live_info.translated_text))
+
+    def block_until_finished(self):
+        """Block until the live procedure has been finished"""
+        if self._thread:
+            self._thread.join()
+
+    def _gen_table(self, text: str, translated: Optional[str] = None):
+        """Generate the table for displaying translated paragraph.
+
+        :param text: The original text.
+        :param translated: The translated result text.
+        """
+        table = Table(title="翻译结果", show_header=False)
+        table.add_column("title")
+        table.add_column("detail", overflow='fold')
+        table.add_row("[bold]原文[/bold]", f'[grey42]{text}[grey42]')
+        table.add_row(Text('翻译中 ') + self.spinner.render(time.time()), translated)
+        return table
+
+
+def gen_translated_table(text: str, translated: str, word: str):
+    """Generate the table for displaying translated paragraph.
+
+    :param text: The original text.
+    :param translated: The translated result text.
+    :param word: The chosen word.
+    """
+    table = Table(title="翻译结果", show_header=False)
+    table.add_column("title")
+    table.add_column("detail", overflow='fold')
+    text_to_show = highlight_words(text, [word], extra_style='red')
+    table.add_row("[bold]原文[/bold]", f'[grey42]{text_to_show}[grey42]')
+    table.add_row("[bold]中文翻译[/bold]", translated)
+    return table
 
 
 def handle_cmd_no() -> NoActionResult:
@@ -333,22 +403,20 @@ def handle_cmd_story(words_cnt: int = DEFAULT_WORDS_CNT_FOR_STORY) -> StoryActio
     # Call OpenAI service to get story text, word's normal form is preferred
     words_str = [w.get_normal_word_display() or w.word for w in words]
     console.print('Words for generating story: [bold]{}[/bold]'.format(', '.join(words_str)))
-    progress = Progress(
-        SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API to write the story...")
-    )
-    with progress:
-        task_id = progress.add_task("get", start=False)
+    with Live(refresh_per_second=LiveStoryRenderer.frames_per_second) as live:
+        live_renderer = LiveStoryRenderer(live)
+        live_renderer.run()
         try:
-            story_text = get_story(words)
+            story_text = get_story(words, live_renderer.live_info)
         except OpenAIServiceError as e:
             console.print(f'[red] Error retrieving story, detail: {e}[red]')
             logger.debug('Detailed stack trace info: %s', traceback.format_exc())
             return StoryActionResult(error='openai_svc_error')
-        finally:
-            progress.update(task_id, total=1, advance=1)
 
-    # Display the story and update words to make LRU work
-    console.print(Panel(highlight_story_text(story_text), title='Enjoy your reading'))
+        live_renderer.block_until_finished()
+        live.update(Panel(highlight_story_text(story_text.strip()), title='Enjoy your reading'))
+
+    # Update words to make LRU work
     word_store.update_story_words(words)
 
     # Display words on demand
@@ -357,6 +425,45 @@ def handle_cmd_story(words_cnt: int = DEFAULT_WORDS_CNT_FOR_STORY) -> StoryActio
         console.print(format_words(words))
 
     return StoryActionResult(words=words)
+
+
+class LiveStoryRenderer:
+    """Render live story
+
+    :param live_display: Live display component from rich
+    """
+
+    frames_per_second = 12
+
+    def __init__(self, live_display: Live) -> None:
+        self.spinner = Spinner('dots')
+        self.live_display = live_display
+        self._thread = None
+        self.live_info = LiveStoryInfo()
+
+    def run(self):
+        """Start a background thread to update the live display, this thread is required
+        because the "loading" animation has to be rendered at a steady pace."""
+        self.live_thread = Thread(target=self._run)
+        self.live_thread.start()
+
+    def _run(self):
+        """A loop function which render the translation result repeatedly."""
+        while not self.live_info.is_finished:
+            time.sleep(1 / self.frames_per_second)
+            self.live_display.update(self._gen_panel(self.live_info.story_text))
+
+    def block_until_finished(self):
+        """Block until the live procedure has been finished"""
+        if self._thread:
+            self._thread.join()
+
+    def _gen_panel(self, story_text: str) -> Panel:
+        """Generate the panel for displaying story."""
+        return Panel(
+            highlight_story_text(story_text.strip()),
+            title=Text('The AI is writing the story ') + self.spinner.render(time.time()),
+        )
 
 
 class StoryCmd:
