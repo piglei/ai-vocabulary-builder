@@ -291,7 +291,7 @@ def parse_word_choices_reply(reply_text: str) -> List[WordChoice]:
 
 # The prompt being used to generate stroy from words
 prompt_write_story_user_tmpl = """\
-Please write a short story which is less than 200 words, the story should use simple words and these special words must be included: {words}. Also replace every special word with "${{word}}$".
+Please write a short story which is less than 200 words, the story should use simple words and these special words must be included: {words}. Also surround every special word with a single "$" character at the beginning and the end.
 """  # noqa: E501
 
 

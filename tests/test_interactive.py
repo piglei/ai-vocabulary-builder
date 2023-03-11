@@ -22,6 +22,10 @@ OPENAI_REPLY_QUERY = (
 
 
 class TestCmdTrans:
+    def test_input_length(self, tmp_path):
+        ret = handle_cmd_trans("world")
+        assert ret.error == 'input_length_invalid'
+
     def test_known_words(self, tmp_path):
         """Check if known words from all sources works"""
         with mock.patch('voc_builder.openai_svc.query_openai', side_effect=OpenAIServiceError()):
