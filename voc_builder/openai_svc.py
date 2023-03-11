@@ -233,10 +233,10 @@ def query_get_word_choices(text: str, known_words: Set[str]) -> str:
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
-            # {"role": "system", "content": prompt_word_choices_system},
-            # {"role": "user", "content": user_content},
+            {"role": "system", "content": prompt_word_choices_system},
+            {"role": "user", "content": user_content},
             # Use a single "user" message at this moment because "system" role doesn't perform better
-            {"role": "user", "content": prompt_word_choices_system + '\n' + user_content},
+            # {"role": "user", "content": prompt_word_choices_system + '\n' + user_content},
         ],
     )
     logger.debug('Completion API returns: %s', completion)
