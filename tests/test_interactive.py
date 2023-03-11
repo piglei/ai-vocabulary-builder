@@ -29,6 +29,12 @@ class TestCmdTrans:
             assert ret.stored_to_voc_book is False
             assert ret.error == 'openai_svc_error'
 
+    def test_openai_svc_error(self, tmp_path):
+        """Test when there's an error calling the OpenAI API"""
+        with mock.patch('voc_builder.openai_svc.query_openai', side_effect=OpenAIServiceError()):
+            ret = handle_cmd_trans("world foo bar baz!")
+            assert ret.error == 'openai_svc_error'
+
     def test_normal(self, tmp_path):
         """Check if known words from all sources works"""
         # Update known words from both sources
@@ -39,7 +45,7 @@ class TestCmdTrans:
             mocked_query.return_value = OPENAI_REPLY_QUERY
             ret = handle_cmd_trans("world foo bar baz!")
 
-            mocked_query.assert_called_once_with("world foo bar baz!", {'foo', 'baz'})
+            assert mocked_query.mock_calls[0].args == ("world foo bar baz!", {'foo', 'baz'})
             assert ret.stored_to_voc_book is True
             assert ret.word_sample and ret.word_sample.word == 'world'
             assert get_word_store().exists('world') is True

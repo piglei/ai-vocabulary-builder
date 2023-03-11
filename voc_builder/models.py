@@ -97,3 +97,15 @@ class TranslationResult:
     """
 
     word_sample: WordSample
+
+
+@dataclass
+class LiveTranslationInfo:
+    """A live info represents an ongoing translation
+
+    :param translated_text: Text being translated
+    :param is_finished: Whether the translation is finished
+    """
+
+    translated_text: str = ''
+    is_finished: bool = False
