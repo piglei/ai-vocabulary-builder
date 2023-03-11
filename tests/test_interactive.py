@@ -45,7 +45,7 @@ class TestCmdTrans:
             mocked_query.return_value = OPENAI_REPLY_QUERY
             ret = handle_cmd_trans("world foo bar baz!")
 
-            assert mocked_query.mock_calls[0].args == ("world foo bar baz!", {'foo', 'baz'})
+            assert mocked_query.call_args[0] == ("world foo bar baz!", {'foo', 'baz'})
             assert ret.stored_to_voc_book is True
             assert ret.word_sample and ret.word_sample.word == 'world'
             assert get_word_store().exists('world') is True
@@ -159,7 +159,7 @@ class TestCmdStory:
         with mock.patch('voc_builder.openai_svc.query_story', side_effect=IOError()) as mocker:
             ret = handle_cmd_story(1)
             assert ret.error == 'openai_svc_error'
-            assert mocker.mock_calls[0].args[0] == ['foo']
+            assert mocker.call_args[0][0] == ['foo']
 
     def test_normal(self):
         get_word_store().add(WordSample.make_empty('foo'))
