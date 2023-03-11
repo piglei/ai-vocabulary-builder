@@ -32,7 +32,7 @@ def test_highlight_words_with_extra_style():
 
 
 def test_highlight_story_text():
-    s = 'Jennifer believed that the $${serendipitous}$$ meeting'
+    s = 'Jennifer believed that the ${serendipitous}$ meeting'
     assert (
         highlight_story_text(s)
         == 'Jennifer believed that the [bold][underline]serendipitous[/underline][/bold] meeting'

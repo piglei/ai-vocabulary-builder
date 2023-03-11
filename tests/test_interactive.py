@@ -156,17 +156,15 @@ class TestCmdStory:
 
     def test_openai_svc_error(self):
         get_word_store().add(WordSample.make_empty('foo'))
-        with mock.patch(
-            'voc_builder.interactive.get_story', side_effect=OpenAIServiceError()
-        ) as mocker:
+        with mock.patch('voc_builder.openai_svc.query_story', side_effect=IOError()) as mocker:
             ret = handle_cmd_story(1)
             assert ret.error == 'openai_svc_error'
-            mocker.assert_called_once_with([WordSample.make_empty('foo')])
+            assert mocker.mock_calls[0].args[0] == ['foo']
 
     def test_normal(self):
         get_word_store().add(WordSample.make_empty('foo'))
         with mock.patch(
-            'voc_builder.interactive.get_story', return_value='story text'
+            'voc_builder.openai_svc.query_story', return_value='story text'
         ), mock.patch('voc_builder.interactive.StoryCmd.prompt_view_words', return_value=True):
             ret = handle_cmd_story(1)
             word = get_word_store().get('foo')

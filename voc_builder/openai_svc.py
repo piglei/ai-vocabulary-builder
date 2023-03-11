@@ -4,7 +4,13 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 import openai
 
 from voc_builder.exceptions import OpenAIServiceError
-from voc_builder.models import LiveTranslationInfo, TranslationResult, WordChoice, WordSample
+from voc_builder.models import (
+    LiveStoryInfo,
+    LiveTranslationInfo,
+    TranslationResult,
+    WordChoice,
+    WordSample,
+)
 
 logger = logging.getLogger()
 
@@ -196,7 +202,7 @@ def get_word_choices(text: str, known_words: Set[str]) -> List[WordChoice]:
 
 
 # The prompt being used to extract multiple words
-prompt_word_choices_system = """You are a translation assistant, I will give you a sentence and a list of words called "known-words" which is divided by ",", please find out the top 3 rarely used word in the sentence(the word must not in "known-words"). Get the normal form, the simplified Chinese meaning and the pronunciation of each word.
+prompt_word_choices_system = """You are a translation assistant, I will give you a paragraph of english and a list of words called "known-words" which is divided by ",", please find out the top 3 rarely used word in the paragraph(the word must not in "known-words"). Get the normal form, the simplified Chinese meaning and the pronunciation of each word.
 
 For each word, your answer should be separated into 4 different lines, each line's content is as below:
 
@@ -211,7 +217,7 @@ The answer should only include 3 word, have no extra content.
 prompt_word_choices_user_tmpl = """\
 known-words: {known_words}
 
-The sentence is:
+The paragraph is:
 
 {text}"""
 
@@ -285,28 +291,60 @@ def parse_word_choices_reply(reply_text: str) -> List[WordChoice]:
 
 # The prompt being used to generate stroy from words
 prompt_write_story_user_tmpl = """\
-Please write a short story which is less than 200 words, the story should use simple words and these special words must be included: {words}. Also replace every special word with "$${{word}}$$".
+Please write a short story which is less than 200 words, the story should use simple words and these special words must be included: {words}. Also replace every special word with "${{word}}$".
 """  # noqa: E501
 
 
-def get_story(words: List[WordSample]) -> str:
+def get_story(words: List[WordSample], live_info: LiveStoryInfo) -> str:
     """Query OpenAI to get a story.
 
+    :param live_info: The info object which represents the writing procedure
     :return: The story text
-    :raise: VocBuilderError
+    :raise: OpenAIServiceError
     """
+    _received = ''
+
+    def handle_stream_content(text: str):
+        nonlocal _received
+        _received += text
+        live_info.story_text = _received
+
     # Try to use the normal form of each word
-    words_str = ','.join([w.word_normal or w.word for w in words])
-    user_content = prompt_write_story_user_tmpl.format(words=words_str)
+    str_words = [w.word_normal or w.word for w in words]
     try:
-        completion = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                # Use a single "user" message at this moment because "system" role doesn't perform better
-                {"role": "user", "content": user_content},
-            ],
-        )
+        return query_story(str_words, stream_handler=handle_stream_content)
     except Exception as e:
         raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
-    logger.debug('Completion API returns: %s', completion)
-    return completion.choices[0].message.content.strip()
+    finally:
+        # Ends the live procedure
+        live_info.is_finished = True
+
+
+def query_story(words: List[str], stream_handler: Optional[StreamHandler] = None) -> str:
+    """Query OpenAI API to get a story.
+
+    :param stream_handler: A callback function to handle partial replies.
+    :return: The story text
+    """
+    content = ''
+
+    # Try to use the normal form of each word
+    words_str = ','.join(words)
+    user_content = prompt_write_story_user_tmpl.format(words=words_str)
+    completion = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        stream=True,
+        messages=[
+            # Use a single "user" message at this moment because "system" role doesn't perform better
+            {"role": "user", "content": user_content},
+        ],
+    )
+    for part in completion:
+        logger.debug('Completion API returns: %s', part)
+        delta = part.choices[0].delta
+        delta_content = delta.get('content')
+        if delta_content:
+            if stream_handler:
+                stream_handler(delta_content)
+            content += delta_content
+    return content

@@ -20,7 +20,7 @@ def highlight_words(text: str, words: Sequence[str], extra_style: str = '') -> s
 
 def highlight_story_text(text: str) -> str:
     """Find all special words in the story text, make them highlighted.
-    All special words are in this format: "$${...}$$"
+    All special words are in this format: "${...}$"
     """
-    pattern = r'\$\${?(.*?)}?\$\$'
+    pattern = r'\${?([\w-]*?)}?\$'
     return re.sub(pattern, r'[bold][underline]\1[/underline][/bold]', text, flags=re.IGNORECASE)

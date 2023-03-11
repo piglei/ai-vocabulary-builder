@@ -109,3 +109,15 @@ class LiveTranslationInfo:
 
     translated_text: str = ''
     is_finished: bool = False
+
+
+@dataclass
+class LiveStoryInfo:
+    """A live info represents an ongoing story writing
+
+    :param story_text: Current story content
+    :param is_finished: Whether the story writing is finished
+    """
+
+    story_text: str = ''
+    is_finished: bool = False
