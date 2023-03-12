@@ -25,6 +25,7 @@ from voc_builder.models import LiveStoryInfo, LiveTranslationInfo, WordChoice, W
 from voc_builder.openai_svc import get_story, get_word_and_translation, get_word_choices
 from voc_builder.store import get_mastered_word_store, get_word_store
 from voc_builder.utils import highlight_story_text, highlight_words, tokenize_text
+from voc_builder.version import check_for_new_versions
 
 logger = logging.getLogger()
 console = Console()
@@ -105,6 +106,13 @@ def enter_interactive_mode():
     except Exception as e:
         logger.debug('Detailed stack trace info: %s', traceback.format_exc())
         console.print(f'Error migrating data from CSV file: {e}')
+
+    # Check form new versions
+    try:
+        check_for_new_versions(console)
+    except Exception as e:
+        logger.debug('Detailed stack trace info: %s', traceback.format_exc())
+        logger.warn(f'Error checking for new versions: {e}')
 
     console.print(
         Panel(

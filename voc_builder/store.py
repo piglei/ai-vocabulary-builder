@@ -199,6 +199,50 @@ class WordStore:
         )
 
 
+@dataclass
+class InternalState:
+    """The internal state of current tool
+
+    :param name: Use a fixed value by default.
+    :param last_ver_checking_ts: The last time when a version checking is performed, in Unix timestamp.
+    """
+
+    name: str
+    last_ver_checking_ts: float
+
+
+class InternalStateStore:
+    """Stores the internal state of the tool itself.
+
+    :param file_path: The file path which stores data.
+    """
+
+    name_default = 'default'
+
+    def __init__(self, file_path: Path):
+        self.file_path = file_path
+        self._db = TinyDB(self.file_path)
+
+    def set_last_ver_checking_ts(self):
+        """Update the last version checking time, set to current."""
+        State = Query()
+        return self._db.upsert(
+            {
+                'name': self.name_default,
+                'last_ver_checking_ts': time.time(),
+            },
+            State.name == self.name_default,
+        )
+
+    def get_last_ver_checking_ts(self) -> Optional[float]:
+        """Get the last version checking time"""
+        State = Query()
+        objs = self._db.search(State.name == self.name_default)
+        if not objs:
+            return None
+        return InternalState(**objs[0]).last_ver_checking_ts
+
+
 # Database related functions
 
 _db_initialized = False
@@ -221,3 +265,9 @@ def get_word_store() -> WordStore:
     if not _db_initialized:
         initialized_db()
     return WordStore(config.DEFAULT_DB_PATH / 'word.json')
+
+
+def get_internal_state_store() -> InternalStateStore:
+    if not _db_initialized:
+        initialized_db()
+    return InternalStateStore(config.DEFAULT_DB_PATH / 'internal.json')
