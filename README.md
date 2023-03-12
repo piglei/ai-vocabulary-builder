@@ -159,6 +159,22 @@ aivoc export --format csv --file-path ./voc.csv
 aivoc remove enormous depicted
 ```
 
+## 常用配置
+
+此处列举了本工具的所有**全局配置项**。目前仅支持通过环境变量来完成配置，未来将增加对配置文件的支持。
+
+> 如果你想了解各子命令支持哪些个性化参数，比如“导出”支持哪些格式和参数，请使用 `--help` 参数，比如：`aivoc export --help`。
+
+### OPENAI_API_KEY
+
+工具调用 OpenAI 的 API 时所使用的 [API Key](https://platform.openai.com/account/api-keys)，必须设置。
+
+示例：
+
+```
+export OPENAI_API_KEY='your_api_key' 
+```
+
 ## 为什么开发这个工具？
 
 学习一门语言，生词本是一个非常重要的工具。一个内容优秀的生词本，至少需要包含：**生词、释义、例句、例句释义**这些内容。但是，手动维护这些内容非常麻烦，因此大部分人都没有自己的生词本。阅读时碰见生词，常常查过词典，转头就忘。
