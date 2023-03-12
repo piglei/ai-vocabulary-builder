@@ -4,7 +4,7 @@ from dataclasses import asdict
 from tinydb import Query
 
 from voc_builder.models import WordProgress, WordSample
-from voc_builder.store import MasteredWordStore, WordStore
+from voc_builder.store import InternalStateStore, MasteredWordStore, WordStore
 
 
 class TestMasteredWordsStore:
@@ -103,3 +103,18 @@ class TestDifferentWordVersion:
         obj = word_store.get('program')
         assert obj and obj.word == 'program'
         assert len(list(word_store.all())) == 1
+
+
+class TestInternalStateStore:
+    def test_last_ver_checking(self, tmp_path):
+        state_store = InternalStateStore(tmp_path / 'foo.json')
+        assert state_store.get_last_ver_checking_ts() is None
+
+        # Update the "last_ver_checking_ts" field twice, test that the values are in ascending order.
+        state_store.set_last_ver_checking_ts()
+        ts = state_store.get_last_ver_checking_ts()
+        assert ts and isinstance(ts, float)
+
+        state_store.set_last_ver_checking_ts()
+        new_ts = state_store.get_last_ver_checking_ts()
+        assert new_ts and new_ts > ts
