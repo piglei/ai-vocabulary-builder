@@ -11,11 +11,11 @@ AI 生词本（“AI Vocabulary Builder” 简称 aivoc）是一个利用了 AI 
 
 工具截图：
 
-<img width="764" alt="image" src="https://user-images.githubusercontent.com/731266/223868557-df07cd17-504a-4dc7-8fd9-cf67e53704c7.png">
+<img width="742" alt="image" src="https://user-images.githubusercontent.com/731266/224582400-56e66b81-3368-42b6-885f-74a6be160edb.png">
 
 ↑ 交互式翻译，自动提取生词
 
-<img width="784" alt="image" src="https://user-images.githubusercontent.com/731266/223868671-8093846e-ca58-4e15-9f4f-0bc0c76f16be.png">
+<img width="742" alt="image" src="https://user-images.githubusercontent.com/731266/224582444-49555765-014c-457c-a83c-72c44e9fe3c5.png">
 
 ↑ 通过阅读故事，牢固掌握生词
 
@@ -157,6 +157,22 @@ aivoc export --format csv --file-path ./voc.csv
 ```console
 # enormous 和 depicted 为需要删除的单词，多个单词使用空格分隔
 aivoc remove enormous depicted
+```
+
+## 常用配置
+
+此处列举了本工具的所有**全局配置项**。目前仅支持通过环境变量来完成配置，未来将增加对配置文件的支持。
+
+> 如果你想了解各子命令支持哪些个性化参数，比如“导出”支持哪些格式和参数，请使用 `--help` 参数，比如：`aivoc export --help`。
+
+### OPENAI_API_KEY
+
+工具调用 OpenAI 的 API 时所使用的 [API Key](https://platform.openai.com/account/api-keys)，必须设置。
+
+示例：
+
+```
+export OPENAI_API_KEY='your_api_key' 
 ```
 
 ## 为什么开发这个工具？
