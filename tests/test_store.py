@@ -1,8 +1,13 @@
+import importlib
+import os
 import time
 from dataclasses import asdict
+from pathlib import Path
 
+import pytest
 from tinydb import Query
 
+from voc_builder import config
 from voc_builder.models import WordProgress, WordSample
 from voc_builder.store import InternalStateStore, MasteredWordStore, WordStore
 
@@ -118,3 +123,20 @@ class TestInternalStateStore:
         state_store.set_last_ver_checking_ts()
         new_ts = state_store.get_last_ver_checking_ts()
         assert new_ts and new_ts > ts
+
+
+class TestStoreDir:
+    def test_mocked_location(self, tmp_path):
+        assert config.DEFAULT_DB_PATH == tmp_path
+        assert config.DEFAULT_CSV_FILE_PATH == tmp_path / 'foo.csv'
+
+    def test_data_dir_location(self, monkeypatch, tmp_path):
+        # Set the environment variable to a test value
+        monkeypatch.setenv('AIVOC_DATA_DIR', str(tmp_path))
+
+        # Reload the module to pick up the new environment variable value
+        importlib.reload(config)
+
+        data_dir = Path(os.environ['AIVOC_DATA_DIR']).expanduser()
+        assert config.DEFAULT_DB_PATH == data_dir / '.aivoc_db'
+        assert config.DEFAULT_CSV_FILE_PATH == data_dir / 'aivoc_builder.csv'
