@@ -11,11 +11,11 @@ AI 生词本（“AI Vocabulary Builder” 简称 aivoc）是一个利用了 AI 
 
 工具截图：
 
-<img width="764" alt="image" src="https://user-images.githubusercontent.com/731266/223868557-df07cd17-504a-4dc7-8fd9-cf67e53704c7.png">
+<img width="742" alt="image" src="https://user-images.githubusercontent.com/731266/224582400-56e66b81-3368-42b6-885f-74a6be160edb.png">
 
 ↑ 交互式翻译，自动提取生词
 
-<img width="784" alt="image" src="https://user-images.githubusercontent.com/731266/223868671-8093846e-ca58-4e15-9f4f-0bc0c76f16be.png">
+<img width="742" alt="image" src="https://user-images.githubusercontent.com/731266/224582444-49555765-014c-457c-a83c-72c44e9fe3c5.png">
 
 ↑ 通过阅读故事，牢固掌握生词
 
