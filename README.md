@@ -172,8 +172,19 @@ aivoc remove enormous depicted
 示例：
 
 ```
-export OPENAI_API_KEY='your_api_key' 
+export OPENAI_API_KEY='your_api_key'
 ```
+
+### AIVOC_DATA_DIR
+
+指定生词本储存数据文件的路径, 默认路径为当前登录用户的 home 目录: `~/`
+
+示例：
+
+```
+export AIVOC_DATA_DIR="$HOME/Documents"
+```
+
 
 ## 为什么开发这个工具？
 
