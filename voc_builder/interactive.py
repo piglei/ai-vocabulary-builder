@@ -35,6 +35,8 @@ console = Console()
 COMMAND_NO = 'no'
 # story: make a stroy from least recent used words
 COMMAND_STORY = 'story'
+# list: list all Vocabulary in the database
+COMMAND_LIST = 'list'
 
 
 class LastActionResult:
@@ -42,6 +44,7 @@ class LastActionResult:
 
     trans_result: ClassVar[Optional['TransActionResult']] = None
     story_result: ClassVar[Optional['StoryActionResult']] = None
+    list_result: ClassVar[Optional['ListActionResult']] = None
 
 
 @dataclass
@@ -88,6 +91,16 @@ class StoryActionResult:
     error: str = ''
 
 
+@dataclass
+class ListActionResult:
+    """The result of a "list" action
+
+    :param error: The actual error message
+    """
+
+    error: str = ''
+
+
 prompt_style = Style.from_dict(
     {
         # Prompt
@@ -125,6 +138,7 @@ def enter_interactive_mode():
     - Special Command:
         * [bold]no[/bold]: remove the last added word and start a manual selection
         * [bold]story[/bold]: Recall words by reading a story written by AI
+        * [bold]list[/bold]: List all words in the vocabulary book
         * [Ctrl+c] to quit'''
             ).strip(),
             title='Welcome to AI Vocabulary Builder!',
@@ -141,6 +155,9 @@ def enter_interactive_mode():
             continue
         elif text == COMMAND_STORY:
             LastActionResult.story_result = handle_cmd_story()
+            continue
+        elif text == COMMAND_LIST:
+            LastActionResult.list_result = handle_cmd_list()
             continue
 
         trans_ret = handle_cmd_trans(text.strip())
@@ -448,6 +465,21 @@ def handle_cmd_story(words_cnt: int = DEFAULT_WORDS_CNT_FOR_STORY) -> StoryActio
         console.print(format_words(words))
 
     return StoryActionResult(words=words)
+
+
+def handle_cmd_list() -> ListActionResult:
+    """Handle the "list" command, list all words in vocabulary book"""
+    word_store = get_word_store()
+    if word_store.count() == 0:
+        console.print('No words in your vocabulary book, translate more and come back later!\n')
+        return ListActionResult(error='no_words')
+    """get all words from word store and sort them by date added"""
+    all_words = sorted(
+            word_store.all(), key=lambda obj: (obj.wp.ts_date_storied or 0, obj.ts_date_added or 0)
+        )
+    words = [obj.ws for obj in all_words]
+    console.print(format_words(words))
+    return ListActionResult()
 
 
 class LiveStoryRenderer:
