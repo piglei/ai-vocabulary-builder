@@ -58,6 +58,20 @@ class TestWordStore:
         word_store.remove('program')
         assert word_store.count() == 1
 
+    def test_list_lastest(self, tmp_path):
+        word_store = WordStore(tmp_path / 'foo.json')
+        for i in range(50):
+            word_store.add(WordSample.make_empty(f'word{i}'))
+        resTen = word_store.list_lastest(limit=10)
+        resDefault = word_store.list_lastest()
+        resAll = word_store.list_lastest(word_store.count())
+        for i in range(10):
+            assert resTen[i].word == f'word{i+40}'
+        for i in range(25):
+            assert resDefault[i].word == f'word{i+25}'
+        for i in range(word_store.count()):
+            assert resAll[i].word == f'word{i}'
+
     def test_story_words(self, tmp_path):
         word_store = WordStore(tmp_path / 'foo.json')
         for s in 'Python program language is easy to read and write'.split():

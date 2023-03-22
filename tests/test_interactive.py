@@ -10,6 +10,7 @@ from voc_builder.interactive import (
     handle_cmd_no,
     handle_cmd_story,
     handle_cmd_trans,
+    handle_cmd_list,
     validate_result_word,
 )
 from voc_builder.models import WordChoice, WordSample
@@ -177,6 +178,45 @@ class TestCmdStory:
             assert word.wp.storied_cnt == 1
             assert len(ret.words) == 1
             assert ret.error == ''
+
+
+class TestCmdList:
+    def test_normal(self):
+        for i in range(50):
+            get_word_store().add(WordSample.make_empty(f'bar{i}'))
+        ret = handle_cmd_list("list 25")
+        for i in range(25):
+            assert ret.words[i].word == f'bar{i+25}'
+        assert len(ret.words) == 25
+        assert ret.error == ''
+
+    def test_all_words(self):
+        for i in range(50):
+            get_word_store().add(WordSample.make_empty(f'bar{i}'))
+        ret = handle_cmd_list("list all")
+        for i in range(50):
+            assert ret.words[i].word == f'bar{i}'
+        assert len(ret.words) == 50
+        assert ret.error == ''
+
+    def test_input_invalid(self):
+        get_word_store().add(WordSample.make_empty('bar1'))
+        ret = handle_cmd_list("list dwajio")
+        assert ret.error == 'invalid_input'
+
+    def test_no_words(self):
+        ret = handle_cmd_list("list")
+        assert ret.error == 'no_words'
+
+    def test_latest_2_words(self):
+        for i in range(25):
+            get_word_store().add(WordSample.make_empty(f'bar{i}'))
+        ret = handle_cmd_list("list 2")
+        assert ret.words[0].word == 'bar23'
+        assert ret.words[1].word == 'bar24'
+        assert len(ret.words) == 2
+        assert ret.error == '' 
+
 
 
 def test_validate_result_word_misc(tmp_path):
