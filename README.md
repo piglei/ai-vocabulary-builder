@@ -106,13 +106,13 @@ Enter text> no
 
 使用 `list` 命令可以查看生词本中最近添加的生词，默认展示 10 条：
 
-```
+```plain
 Enter text> list
 ```
 
 该命令接收一个可选参数：`limit`，用来指定生词的数量。常见用法：
 
-```
+```plain
 # 查看最近 5 条
 Enter text> list 5
 # 查看所有生词
@@ -191,6 +191,19 @@ aivoc remove enormous depicted
 ```
 export OPENAI_API_KEY='your_api_key'
 ```
+
+### OPENAI_API_BASE
+
+工具所使用的 OpenAI 的 API 地址，可选设置。仅当默认 API 地址（`https://api.openai.com/v1`）无法正常访问时指定。
+
+示例：
+
+```bash
+# 将 www.example.com 替换为你的域名
+export OPENAI_API_BASE="https://www.my-openai-proxy.com/v1"
+```
+
+💡 请关注地址配置中的 `/v1` 部分。是否添加它，取决于你的代理配置如何。不确定的话可以先写上，如果无法成功调用，再去掉 `/v1` 试试看。
 
 ### AIVOC_DATA_DIR
 
