@@ -137,7 +137,7 @@ def enter_interactive_mode():  # noqa: C901
     - One sentence at a time, don't paste huge amounts of text at once
     - Get your vocabulary book file by running [bold]aivoc export --format csv[/bold]
     - Special Command:
-        * [bold]no[/bold]: remove the last added word and start a manual selection
+        * [bold]no[/bold]: Remove the last added word and start a manual selection
         * [bold]story[/bold]: Recall words by reading a story written by AI
         * [bold]list {limit}[/bold]: List recently added words. Args:
           - {limit}: optional, a number or 'all', defaults to 10.

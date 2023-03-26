@@ -39,15 +39,21 @@ def version():
 
 @main.command(help='Start the interactive shell')
 @click.option('--api-key', envvar='OPENAI_API_KEY', required=True, help='Your OpenAI API key')
+@click.option(
+    '--api-base', envvar='OPENAI_API_BASE', required=False, help='The OpenAI API base address'
+)
 @click.option('--text', type=str, help='Text to be translated, interactive mode also supported')
 @click.option(
     '--log-level', type=str, default='INFO', help='Log level, change it to DEBUG to see more logs'
 )
-def run(api_key: str, text: str, log_level: str):
+def run(api_key: str, text: str, log_level: str, api_base: Optional[str] = None):
     # Set logging level
     logger.setLevel(getattr(logging, log_level.upper()))
 
     openai.api_key = api_key
+    # Set the API base address if given
+    if api_base:
+        openai.api_base = api_base
 
     # Read text either from command line or stdin
     if text:
