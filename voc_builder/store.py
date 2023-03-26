@@ -124,14 +124,17 @@ class WordStore:
                 Word.ws.word == obj.ws.word,
             )
 
-    def list_lastest(self, limit: int = 25) -> List[WordDetailedObj]:
-        """List lastest added words
+    def list_latest(self, limit: Optional[int] = None) -> List[WordDetailedObj]:
+        """List latest added words
 
-        :param limit: How many words to list
+        :param limit: How many words to list, if not given, list all.
         :return: A list of detailed word objects.
         """
-        # sort by date added and return only the lastest limit items.
-        return sorted(self.all(), key=lambda obj: obj.ts_date_added, reverse=False)[-limit:]
+        results = sorted(self.all(), key=lambda obj: obj.ts_date_added)
+        if limit is not None:
+            return results[-limit:]
+        else:
+            return results
 
     def filter(self, words: Set[str]) -> Set[str]:
         """Filter the given word list, return those exists in current db
