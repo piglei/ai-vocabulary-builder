@@ -74,7 +74,7 @@ class NoActionResult:
     :param error: The actual error message
     """
 
-    word: Optional[WordSample] = None
+    word: list[WordSample] | Optional[WordSample] = None
     stored_to_voc_book: bool = False
     error: str = ''
 
@@ -362,7 +362,7 @@ def handle_cmd_no() -> NoActionResult:
     if not ret.invalid_for_adding:
         selector.discard_word(ret.word_sample)
 
-    progress = Progress(SpinnerColumn(), TextColumn("[bold blue] 正在提取多个生词"))
+    progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API"))
     with progress:
         task_id = progress.add_task("get", start=False)
         try:
@@ -382,34 +382,38 @@ def handle_cmd_no() -> NoActionResult:
     if not choice:
         console.print('Skipped.', style='grey42')
         return NoActionResult(error='user_skip')
-
-    word_sample = WordSample(
-        word=choice.word,
-        word_normal=choice.word_normal,
-        word_meaning=choice.word_meaning,
-        pronunciation=choice.pronunciation,
+    
+    word_samplelist = []
+    for i in choice:
+        word_samplelist.append(WordSample(
+        word=i.word,
+        word_normal=i.word_normal,
+        word_meaning=i.word_meaning,
+        pronunciation=i.pronunciation,
         translated_text=ret.word_sample.translated_text,
         orig_text=ret.input_text,
-    )
-
-    try:
-        validate_result_word(word_sample, ret.input_text)
-    except WordInvalidForAdding as e:
-        console.print(f'Unable to add "{word_sample.word}", reason: {e}', style='grey42')
-        return NoActionResult(word=word_sample, stored_to_voc_book=False, error=str(e))
+    ))
+    
 
     word_store = get_word_store()
-    word_store.add(word_sample)
-    console.print(
-        (
-            f'[bold]"{word_sample.word}"[/bold] was added to your vocabulary book ([bold]{word_store.count()}[/bold] '
-            'in total), well done!\n'
-        ),
-        style='grey42',
-    )
+    for word_sample in word_samplelist:
+        try:
+            validate_result_word(word_sample, ret.input_text)
+        except WordInvalidForAdding as e:
+            console.print(f'Unable to add "{word_sample.word}", reason: {e}', style='grey42')
+            return NoActionResult(word=word_sample, stored_to_voc_book=False, error=str(e))
+
+        word_store.add(word_sample)
+        console.print(
+            (
+                f'[bold]"{word_sample.word}"[/bold] was added to your vocabulary book ([bold]{word_store.count()}[/bold] '
+                'in total), well done!\n'
+            ),
+            style='grey42',
+        )
 
     LastActionResult.trans_result = None
-    return NoActionResult(word=word_sample, stored_to_voc_book=True)
+    return NoActionResult(word=word_samplelist, stored_to_voc_book=True)
 
 
 class ManuallySelector:
@@ -433,7 +437,7 @@ class ManuallySelector:
         )
         return get_word_choices(text, known_words)
 
-    def get_user_word_selection(self, choices: List[WordChoice]) -> Optional[WordChoice]:
+    def get_user_word_selection(self, choices: List[WordChoice]) -> list[WordChoice] | None:
         """Get the word which the user selected
 
         :return: None if user give up selection
@@ -445,11 +449,14 @@ class ManuallySelector:
             return None
 
         # Get the WordChoice, turn it into WordSample and save to vocabulary book
-        word_choice = next(w for w in choices if w.word == WordChoice.extract_word(answer))
+        foramt_answers = []
+        for a in answer:
+            foramt_answers.append(WordChoice.extract_word(a))
+        word_choice = [w for w in choices if w.word in foramt_answers]
         return word_choice
 
     def prompt_select_word(self, str_choices: List[str]) -> str:
-        return questionary.select("Choose the word you don't know", choices=str_choices).ask()
+        return questionary.checkbox("Choose the word you don't know", choices=str_choices).ask()
 
 
 # The default number of words used for writing the story
