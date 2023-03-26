@@ -93,10 +93,12 @@ class WordProgress:
 class TranslationResult:
     """The result of a successful translation
 
-    :param word_sample: The WordSample object
+    :param text: The original text.
+    :param translated_text: The translated text.
     """
 
-    word_sample: WordSample
+    text: str
+    translated_text: str
 
 
 @dataclass

@@ -17,10 +17,9 @@ from voc_builder.interactive import (
 from voc_builder.models import WordChoice, WordSample
 from voc_builder.store import get_mastered_word_store, get_word_store
 
-# A valid OpenAI reply example for text translating
-OPENAI_REPLY_QUERY = (
-    'word: world\nnormal_form: world\npronunciation: wɔːld\nmeaning: 世界\ntranslated: 你好，世界。'
-)
+# Valid OpenAI replies for text translating
+OPENAI_REPLY_TRANS = '你好，世界。'
+OPENAI_REPLY_WORD = 'word: world\nnormal_form: world\npronunciation: wɔːld\nmeaning: 世界'
 
 
 class TestCmdTrans:
@@ -30,14 +29,18 @@ class TestCmdTrans:
 
     def test_known_words(self, tmp_path):
         """Check if known words from all sources works"""
-        with mock.patch('voc_builder.openai_svc.query_openai', side_effect=OpenAIServiceError()):
+        with mock.patch(
+            'voc_builder.openai_svc.query_translation', side_effect=OpenAIServiceError()
+        ):
             ret = handle_cmd_trans("foo bar baz!")
             assert ret.stored_to_voc_book is False
             assert ret.error == 'openai_svc_error'
 
     def test_openai_svc_error(self, tmp_path):
         """Test when there's an error calling the OpenAI API"""
-        with mock.patch('voc_builder.openai_svc.query_openai', side_effect=OpenAIServiceError()):
+        with mock.patch(
+            'voc_builder.openai_svc.query_translation', side_effect=OpenAIServiceError()
+        ):
             ret = handle_cmd_trans("world foo bar baz!")
             assert ret.error == 'openai_svc_error'
 
@@ -47,11 +50,14 @@ class TestCmdTrans:
         get_word_store().add(WordSample.make_empty('foo'))
         get_mastered_word_store().add('baz')
 
-        with mock.patch('voc_builder.openai_svc.query_openai') as mocked_query:
-            mocked_query.return_value = OPENAI_REPLY_QUERY
+        with mock.patch('voc_builder.openai_svc.query_translation') as mocked_trans, mock.patch(
+            'voc_builder.openai_svc.query_get_word_choices'
+        ) as mocked_word:
+            mocked_trans.return_value = OPENAI_REPLY_TRANS
+            mocked_word.return_value = OPENAI_REPLY_WORD
             ret = handle_cmd_trans("world foo bar baz!")
 
-            assert mocked_query.call_args[0] == ("world foo bar baz!", {'foo', 'baz'})
+            assert mocked_word.call_args[0] == ("world foo bar baz!", {'foo', 'baz'})
             assert ret.stored_to_voc_book is True
             assert ret.word_sample and ret.word_sample.word == 'world'
             assert get_word_store().exists('world') is True

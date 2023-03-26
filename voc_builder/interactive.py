@@ -24,7 +24,7 @@ from voc_builder.commands.exceptions import CommandSyntaxError, NotCommandError
 from voc_builder.commands.parsers import ListCmdParser, ListCommandExpr
 from voc_builder.exceptions import OpenAIServiceError, WordInvalidForAdding
 from voc_builder.models import LiveStoryInfo, LiveTranslationInfo, WordChoice, WordSample
-from voc_builder.openai_svc import get_story, get_word_and_translation, get_word_choices
+from voc_builder.openai_svc import get_story, get_translation, get_uncommon_word, get_word_choices
 from voc_builder.store import get_mastered_word_store, get_word_store
 from voc_builder.utils import highlight_story_text, highlight_words, tokenize_text
 from voc_builder.version import check_for_new_versions
@@ -140,7 +140,7 @@ def enter_interactive_mode():  # noqa: C901
         * [bold]no[/bold]: Remove the last added word and start a manual selection
         * [bold]story[/bold]: Recall words by reading a story written by AI
         * [bold]list {limit}[/bold]: List recently added words. Args:
-          - {limit}: optional, a number or 'all', defaults to 10.
+          - [underline]limit[/underline]: optional, a number or "all", defaults to 10.
         * [Ctrl+c] to quit'''
             ).strip(),
             title='Welcome to AI Vocabulary Builder!',
@@ -210,14 +210,12 @@ def handle_cmd_trans(text: str) -> TransActionResult:
     word_store = get_word_store()
 
     orig_words = tokenize_text(text)
-    # Words already in vocabulary book and marked as mastered are treated as "known"
-    known_words = word_store.filter(orig_words) | mastered_word_s.filter(orig_words)
-
     with Live(refresh_per_second=LiveTransRenderer.frames_per_second) as live:
+        # Get the translation and do live updating
         live_renderer = LiveTransRenderer(live)
         live_renderer.run(text)
         try:
-            trans_ret = get_word_and_translation(text, known_words, live_renderer.live_info)
+            trans_ret = get_translation(text, live_renderer.live_info)
             live_renderer.block_until_finished()
         except OpenAIServiceError as e:
             console.print(f'[red] Error processing text, detail: {e}[red]')
@@ -225,9 +223,35 @@ def handle_cmd_trans(text: str) -> TransActionResult:
             return TransActionResult(
                 input_text=text, stored_to_voc_book=False, error='openai_svc_error'
             )
+        live.update(gen_translated_table(text, trans_ret.translated_text))
 
-        word = trans_ret.word_sample
-        live.update(gen_translated_table(text, word.translated_text, word.word))
+    # Words already in vocabulary book and marked as mastered are treated as "known"
+    known_words = word_store.filter(orig_words) | mastered_word_s.filter(orig_words)
+
+    console.print('\n')
+    progress = Progress(SpinnerColumn(), TextColumn("[bold blue] 正在提取生词"))
+    with progress:
+        task_id = progress.add_task("get", start=False)
+        # Get the uncommon word
+        try:
+            choice = get_uncommon_word(text, known_words)
+        except OpenAIServiceError as e:
+            console.print(f'[red] Error extracting word, detail: {e}[red]')
+            logger.debug('Detailed stack trace info: %s', traceback.format_exc())
+            return TransActionResult(
+                input_text=text, stored_to_voc_book=False, error='openai_svc_error'
+            )
+        finally:
+            progress.update(task_id, total=1, advance=1)
+
+        word = WordSample(
+            word=choice.word,
+            word_normal=choice.word_normal,
+            word_meaning=choice.word_meaning,
+            pronunciation=choice.pronunciation,
+            translated_text=trans_ret.translated_text,
+            orig_text=trans_ret.text,
+        )
 
     console.print(f'> The word AI has chosen is "[bold]{word.word}[/bold]".\n')
 
@@ -303,7 +327,7 @@ class LiveTransRenderer:
         return table
 
 
-def gen_translated_table(text: str, translated: str, word: str):
+def gen_translated_table(text: str, translated: str):
     """Generate the table for displaying translated paragraph.
 
     :param text: The original text.
@@ -313,8 +337,7 @@ def gen_translated_table(text: str, translated: str, word: str):
     table = Table(title="翻译结果", show_header=False)
     table.add_column("title")
     table.add_column("detail", overflow='fold')
-    text_to_show = highlight_words(text, [word], extra_style='red')
-    table.add_row("[bold]原文[/bold]", f'[grey42]{text_to_show}[grey42]')
+    table.add_row("[bold]原文[/bold]", f'[grey42]{text}[grey42]')
     table.add_row("[bold]中文翻译[/bold]", translated)
     return table
 
@@ -339,7 +362,7 @@ def handle_cmd_no() -> NoActionResult:
     if not ret.invalid_for_adding:
         selector.discard_word(ret.word_sample)
 
-    progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API"))
+    progress = Progress(SpinnerColumn(), TextColumn("[bold blue] 正在提取多个生词"))
     with progress:
         task_id = progress.add_task("get", start=False)
         try:
