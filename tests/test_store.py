@@ -4,7 +4,6 @@ import time
 from dataclasses import asdict
 from pathlib import Path
 
-import pytest
 from tinydb import Query
 
 from voc_builder import config
@@ -58,19 +57,18 @@ class TestWordStore:
         word_store.remove('program')
         assert word_store.count() == 1
 
-    def test_list_lastest(self, tmp_path):
+    def test_list_latest(self, tmp_path):
         word_store = WordStore(tmp_path / 'foo.json')
         for i in range(50):
             word_store.add(WordSample.make_empty(f'word{i}'))
-        resTen = word_store.list_lastest(limit=10)
-        resDefault = word_store.list_lastest()
-        resAll = word_store.list_lastest(word_store.count())
-        for i in range(10):
-            assert resTen[i].word == f'word{i+40}'
-        for i in range(25):
-            assert resDefault[i].word == f'word{i+25}'
-        for i in range(word_store.count()):
-            assert resAll[i].word == f'word{i}'
+
+        items = word_store.list_latest(limit=10)
+        # The items should starts from "word40"
+        for i, word in enumerate(items):
+            assert word.word == f'word{i+40}'
+
+        # Test list all
+        assert len(word_store.list_latest()) == 50
 
     def test_story_words(self, tmp_path):
         word_store = WordStore(tmp_path / 'foo.json')

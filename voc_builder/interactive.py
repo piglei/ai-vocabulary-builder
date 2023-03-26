@@ -20,6 +20,8 @@ from rich.table import Table
 from rich.text import Text
 
 from voc_builder.builder import migrate_builder_data_to_store
+from voc_builder.commands.exceptions import CommandSyntaxError, NotCommandError
+from voc_builder.commands.parsers import ListCmdParser, ListCommandExpr
 from voc_builder.exceptions import OpenAIServiceError, WordInvalidForAdding
 from voc_builder.models import LiveStoryInfo, LiveTranslationInfo, WordChoice, WordSample
 from voc_builder.openai_svc import get_story, get_word_and_translation, get_word_choices
@@ -35,8 +37,6 @@ console = Console()
 COMMAND_NO = 'no'
 # story: make a stroy from least recent used words
 COMMAND_STORY = 'story'
-# list: list vocabularies in the database
-COMMAND_LIST = 'list'
 
 
 class LastActionResult:
@@ -97,6 +97,7 @@ class ListActionResult:
 
     :param error: The actual error message
     """
+
     words: List[WordSample] = field(default_factory=list)
     error: str = ''
 
@@ -110,7 +111,7 @@ prompt_style = Style.from_dict(
 )
 
 
-def enter_interactive_mode():
+def enter_interactive_mode():  # noqa: C901
     """Enter the interactive mode"""
     # Try to migrate the data in the CSV file(for version < 0.2) to the new word store which was
     # based on TinyDB, this should be a one off action.
@@ -138,7 +139,8 @@ def enter_interactive_mode():
     - Special Command:
         * [bold]no[/bold]: remove the last added word and start a manual selection
         * [bold]story[/bold]: Recall words by reading a story written by AI
-        * [bold]list {arg}[/bold]: List {arg} last added words in the vocabulary book. Arg can be a 'number', 'all' or empty(default value = 25).
+        * [bold]list {limit}[/bold]: List recently added words. Args:
+          - {limit}: optional, a number or 'all', defaults to 10.
         * [Ctrl+c] to quit'''
             ).strip(),
             title='Welcome to AI Vocabulary Builder!',
@@ -156,10 +158,19 @@ def enter_interactive_mode():
         elif text == COMMAND_STORY:
             LastActionResult.story_result = handle_cmd_story()
             continue
-        # Checking if the text is begin with "list" or "list "
-        elif text.startswith(COMMAND_LIST):
-            # Passing the text to the handle_cmd_story() and detemine how many words to present 
-            LastActionResult.list_result = handle_cmd_list(text)
+
+        # Try different command parsers
+        # TODO: Use a loop to try different parsers
+        try:
+            list_expr = ListCmdParser().parse(text)
+        except NotCommandError:
+            # Handle as a normal translation
+            pass
+        except CommandSyntaxError as e:
+            console.print(f'List command syntax error: {e}', style='red')
+            continue
+        else:
+            LastActionResult.list_result = handle_cmd_list(list_expr)
             continue
 
         trans_ret = handle_cmd_trans(text.strip())
@@ -418,6 +429,7 @@ class ManuallySelector:
         return questionary.select("Choose the word you don't know", choices=str_choices).ask()
 
 
+# The default number of words used for writing the story
 DEFAULT_WORDS_CNT_FOR_STORY = 6
 
 
@@ -469,48 +481,31 @@ def handle_cmd_story(words_cnt: int = DEFAULT_WORDS_CNT_FOR_STORY) -> StoryActio
     return StoryActionResult(words=words)
 
 
-DEFAULT_WORDS_CNT_FOR_LIST = 25
+# By default, list 10 latest words
+DEFAULT_WORDS_CNT_FOR_LIST = 10
 
 
-def handle_cmd_list(text: str) -> ListActionResult:
-    """Handle the "list" command, list select 25 words in the vocabulary csv_book_path
+def handle_cmd_list(expr: ListCommandExpr) -> ListActionResult:
+    """Handle the "list" command, list the latest words in the vocabulary book
 
-    :param text: the text user inputed.
-    :return: A list actionresult.
+    :param expr: The parsed list expression object.
+    :return: A list action result.
     """
-    # Inintialize variables and class
-    text = text.lower()
     word_store = get_word_store()
-    str_afterCommand = text[len(COMMAND_LIST):].strip()
-    word_cnt = DEFAULT_WORDS_CNT_FOR_LIST
 
     # Checking if the user has any words in the vocabulary book
     if word_store.count() == 0:
         console.print('No words in your vocabulary book, translate more and come back later!\n')
         return ListActionResult(error='no_words')
 
-    # Checking if the user has entered a number of words to list or "all"
-    if str_afterCommand.isdigit():
-        word_cnt = int(str_afterCommand)
-        if word_cnt > word_store.count():
-            word_cnt = word_store.count()
-        if word_cnt <= 0:
-            word_cnt = DEFAULT_WORDS_CNT_FOR_LIST
-    elif str_afterCommand == '':
-        word_cnt = DEFAULT_WORDS_CNT_FOR_LIST
-    elif str_afterCommand == 'all':
-        word_cnt = word_store.count()
+    if expr.all:
+        words = word_store.list_latest()
     else:
-        console.print(
-            f'[red]Invalid input, please enter a number or "all" to list all words in your vocabulary book.[red]\n'
-        )
-        return ListActionResult(error='invalid_input')
+        words = word_store.list_latest(limit=expr.num or DEFAULT_WORDS_CNT_FOR_LIST)
 
-    # Get words from the vocabulary book and display them
-    last_words = word_store.list_lastest(word_cnt)
-    words = [obj.ws for obj in last_words]
-    console.print(format_words(words))
-    return ListActionResult(words=words)
+    word_samples = [obj.ws for obj in words]
+    console.print(format_words(word_samples))
+    return ListActionResult(words=word_samples)
 
 
 class LiveStoryRenderer:

@@ -102,6 +102,23 @@ Enter text> no
 
 > 别气馁，祝你下次好运。😁
 
+#### 查看生词
+
+使用 `list` 命令可以查看生词本中最近添加的生词，默认展示 10 条：
+
+```
+Enter text> list
+```
+
+该命令接收一个可选参数：`limit`，用来指定生词的数量。常见用法：
+
+```
+# 查看最近 5 条
+Enter text> list 5
+# 查看所有生词
+Enter text> list all
+```
+
 #### 阅读故事来助记生词
 
 为了快速并牢固掌握生词本里的单词，本工具提供了一个创新的故事模式。在交互式命令行模式下，输入 `story` 开始故事模式：
@@ -184,7 +201,6 @@ export OPENAI_API_KEY='your_api_key'
 ```
 export AIVOC_DATA_DIR="$HOME/Documents"
 ```
-
 
 ## 为什么开发这个工具？
 
