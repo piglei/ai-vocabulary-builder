@@ -101,7 +101,7 @@ class TestCmdNo:
             ret = handle_cmd_no()
             assert ret.error == 'openai_svc_error'
 
-    def test_openai_svc_errr(self, has_last_added_word):
+    def test_openai_svc_error(self, has_last_added_word):
         with mock.patch(
             'voc_builder.interactive.get_word_choices', side_effect=OpenAIServiceError()
         ) as mocker:
