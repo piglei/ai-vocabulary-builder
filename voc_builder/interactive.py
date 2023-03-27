@@ -74,7 +74,7 @@ class NoActionResult:
     :param error: The actual error message
     """
 
-    word: list[WordSample] | Optional[WordSample] = None
+    words: Optional[list[WordSample]] = None
     stored_to_voc_book: bool = False
     error: str = ''
 
@@ -360,7 +360,7 @@ def handle_cmd_no() -> NoActionResult:
 
     selector = ManuallySelector()
     if not ret.invalid_for_adding:
-        selector.discard_word(ret.word_sample)
+        selector.init_selector(ret.word_sample)
 
     progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API"))
     with progress:
@@ -401,7 +401,7 @@ def handle_cmd_no() -> NoActionResult:
             validate_result_word(word_sample, ret.input_text)
         except WordInvalidForAdding as e:
             console.print(f'Unable to add "{word_sample.word}", reason: {e}', style='grey42')
-            return NoActionResult(word=word_sample, stored_to_voc_book=False, error=str(e))
+            return NoActionResult(words=word_sample, stored_to_voc_book=False, error=str(e))
 
         word_store.add(word_sample)
         console.print(
@@ -413,7 +413,7 @@ def handle_cmd_no() -> NoActionResult:
         )
 
     LastActionResult.trans_result = None
-    return NoActionResult(word=word_samplelist, stored_to_voc_book=True)
+    return NoActionResult(words=word_samplelist, stored_to_voc_book=True)
 
 
 class ManuallySelector:
@@ -421,12 +421,10 @@ class ManuallySelector:
 
     choice_skip = 'None of above, skip for now.'
 
-    def discard_word(self, word: WordSample):
-        """Discard a word added before"""
-        # Remove last word, mark as mastered
-        console.print(f'"{word.word}" was discarded, preparing other words...', style='grey42')
+    def init_selector(self, word: WordSample):
+        """Remove the last action word for prepare for the next action"""
+        # Remove last word
         get_word_store().remove(word.word)
-        get_mastered_word_store().add(word.word)
 
     def get_choices(self, text: str) -> List[WordChoice]:
         """Get word choices from OpenAI service"""
@@ -437,20 +435,20 @@ class ManuallySelector:
         )
         return get_word_choices(text, known_words)
 
-    def get_user_word_selection(self, choices: List[WordChoice]) -> list[WordChoice] | None:
-        """Get the word which the user selected
+    def get_user_word_selection(self, choices: List[WordChoice]) -> Optional[list[WordChoice]]:
+        """Get the words which the user selected
 
         :return: None if user give up selection
         """
         # Read user input
         str_choices = [w.get_console_display() for w in choices] + [self.choice_skip]
         answer = self.prompt_select_word(str_choices)
-        if answer == self.choice_skip:
-            return None
 
         # Get the WordChoice, turn it into WordSample and save to vocabulary book
         foramt_answers = []
         for a in answer:
+            if a == self.choice_skip:
+                return None
             foramt_answers.append(WordChoice.extract_word(a))
         word_choice = [w for w in choices if w.word in foramt_answers]
         return word_choice
@@ -612,7 +610,7 @@ def format_words(words: List[WordSample]) -> Table:
             w.word,
             w.pronunciation,
             w.get_word_meaning_display(),
-            highlight_words(w.orig_text, [w.word]) + '\n' + w.translated_text,
+            highlight_words(w.orig_text, [w.word]) + '\n' + "[grey42]" + w.translated_text + "[/grey42]",
         )
     return table
 
