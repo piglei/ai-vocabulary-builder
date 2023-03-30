@@ -360,7 +360,7 @@ def handle_cmd_no() -> NoActionResult:
 
     selector = ManuallySelector()
     if not ret.invalid_for_adding:
-        selector.init_selector(ret.word_sample)
+        selector.remove_word_fromPreAction(ret.word_sample)
 
     progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API"))
     with progress:
@@ -378,26 +378,23 @@ def handle_cmd_no() -> NoActionResult:
         console.print('No words could be extracted from the text you given, skip.', style='grey42')
         return NoActionResult(error='no_choices_error')
 
-    choice = selector.get_user_word_selection(choices)
-    if not choice:
+    choices_from_user = selector.get_user_word_selection(choices)
+    if not choices_from_user:
         console.print('Skipped.', style='grey42')
         return NoActionResult(error='user_skip')
-    
-    word_samplelist = []
-    for i in choice:
-        word_samplelist.append(WordSample(
-        word=i.word,
-        word_normal=i.word_normal,
-        word_meaning=i.word_meaning,
-        pronunciation=i.pronunciation,
-        translated_text=ret.word_sample.translated_text,
-        orig_text=ret.input_text,
-    ))
-    
 
+    word_samplelist = []
     word_store = get_word_store()
-    for word_sample in word_samplelist:
+    for word_sample in choices_from_user:
         try:
+            word_samplelist.append(WordSample(
+                word=word_sample.word,
+                word_normal=word_sample.word_normal,
+                word_meaning=word_sample.word_meaning,
+                pronunciation=word_sample.pronunciation,
+                translated_text=ret.word_sample.translated_text,
+                orig_text=ret.input_text,
+            ))
             validate_result_word(word_sample, ret.input_text)
         except WordInvalidForAdding as e:
             console.print(f'Unable to add "{word_sample.word}", reason: {e}', style='grey42')
@@ -421,7 +418,7 @@ class ManuallySelector:
 
     choice_skip = 'None of above, skip for now.'
 
-    def init_selector(self, word: WordSample):
+    def remove_word_fromPreAction(self, word: WordSample):
         """Remove the last action word for prepare for the next action"""
         # Remove last word
         get_word_store().remove(word.word)
@@ -435,22 +432,23 @@ class ManuallySelector:
         )
         return get_word_choices(text, known_words)
 
-    def get_user_word_selection(self, choices: List[WordChoice]) -> Optional[list[WordChoice]]:
+    def get_user_word_selection(self, choices: List[WordChoice]) -> list[WordChoice]:
         """Get the words which the user selected
 
         :return: None if user give up selection
         """
         # Read user input
         str_choices = [w.get_console_display() for w in choices] + [self.choice_skip]
-        answer = self.prompt_select_word(str_choices)
+        choices_from_user = self.prompt_select_word(str_choices)
 
         # Get the WordChoice, turn it into WordSample and save to vocabulary book
-        foramt_answers = []
-        for a in answer:
+        foramted_choices = [WordChoice]
+        for a in choices_from_user:
+            # Check if user give up choosing
             if a == self.choice_skip:
                 return None
-            foramt_answers.append(WordChoice.extract_word(a))
-        word_choice = [w for w in choices if w.word in foramt_answers]
+            foramted_choices.append(WordChoice.extract_word(a))
+        word_choice = [w for w in choices if w.word in foramted_choices]
         return word_choice
 
     def prompt_select_word(self, str_choices: List[str]) -> str:
