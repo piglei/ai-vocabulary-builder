@@ -84,3 +84,12 @@ meaning: 版本'''
 )
 def test_parse_word_choices_reply(input, expected):
     assert parse_word_choices_reply(input) == expected
+
+
+def test_parse_word_choices_reply_invalid_reply():
+    _reply_words_missing_fields = '''\
+word: versions
+normal_form: version
+'''
+    with pytest.raises(ValueError):
+        parse_word_choices_reply(_reply_words_missing_fields)

@@ -16,6 +16,8 @@ def test_handle_export_csv_file(tmp_path, w_sample_world):
     handle_export('csv', file_path)
     with open(file_path, 'r', encoding='utf-8') as fp:
         content = fp.read()
-        assert content.startswith("#,单词,读音,释义,例句/翻译,添加时间\n")
+        assert content.startswith(
+            "#,Word,Pronunciation,Definition,Example sentence / Translation,Date added"
+        )
         # The `date_added` field cannot be compared when the timezone is indeterminate.
         assert '1,world,wɔrld,世界,"Hello, world! / 你好，世界！",' in content
