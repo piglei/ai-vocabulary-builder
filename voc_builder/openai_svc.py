@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, List, Optional, Set, Tuple
 
 import openai
 
@@ -110,10 +110,14 @@ def get_uncommon_word(text: str, known_words: Set[str]) -> WordChoice:
     return items[0]
 
 
+# This default limit of how many new words to extract from the text
+DEFAULT_NEW_WORDS_LIMIT = 4
+
+
 def get_word_choices(text: str, known_words: Set[str]) -> List[WordChoice]:
     """Get a choices of words in given text"""
     try:
-        reply = query_get_word_choices(text, known_words, limit=4)
+        reply = query_get_word_choices(text, known_words, limit=DEFAULT_NEW_WORDS_LIMIT)
     except Exception as e:
         raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
     try:

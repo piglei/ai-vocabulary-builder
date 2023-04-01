@@ -69,12 +69,14 @@ class TransActionResult:
 class NoActionResult:
     """The result of a "story" action
 
-    :param word: The word user has selected
+    :param words: The words user has selected and saved successfully, might be empty
+    :param failed_words: The words user has selected but failed to save
     :param stored_to_voc_book: whether the word has been saved
     :param error: The actual error message
     """
 
-    words: Optional[list[WordSample]] = None
+    words: List[WordSample] = field(default_factory=list)
+    failed_words: List[WordSample] = field(default_factory=list)
     stored_to_voc_book: bool = False
     error: str = ''
 
@@ -360,9 +362,13 @@ def handle_cmd_no() -> NoActionResult:
 
     selector = ManuallySelector()
     if not ret.invalid_for_adding:
-        selector.remove_word_fromPreAction(ret.word_sample)
+        selector.discard_word(ret.word_sample)
+        console.print(
+            f'"{ret.word_sample.word}" has been discarded from your vocabulary book.',
+            style='grey42',
+        )
 
-    progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Querying OpenAI API"))
+    progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Extracting multiple new words"))
     with progress:
         task_id = progress.add_task("get", start=False)
         try:
@@ -375,42 +381,49 @@ def handle_cmd_no() -> NoActionResult:
             progress.update(task_id, total=1, advance=1)
 
     if not choices:
-        console.print('No words could be extracted from the text you given, skip.', style='grey42')
+        console.print('No words could be extracted from your input text, skip.', style='grey42')
         return NoActionResult(error='no_choices_error')
 
-    choices_from_user = selector.get_user_word_selection(choices)
+    choices_from_user = selector.get_user_words_selection(choices)
     if not choices_from_user:
         console.print('Skipped.', style='grey42')
         return NoActionResult(error='user_skip')
 
-    word_samplelist = []
-    word_store = get_word_store()
+    # Process the words, try to add them to the vocabulary book and print the result
+    words: List[WordSample] = []
+    failed_words: List[WordSample] = []
     for word_sample in choices_from_user:
+        sample = WordSample(
+            word=word_sample.word,
+            word_normal=word_sample.word_normal,
+            word_meaning=word_sample.word_meaning,
+            pronunciation=word_sample.pronunciation,
+            translated_text=ret.word_sample.translated_text,
+            orig_text=ret.input_text,
+        )
         try:
-            word_samplelist.append(WordSample(
-                word=word_sample.word,
-                word_normal=word_sample.word_normal,
-                word_meaning=word_sample.word_meaning,
-                pronunciation=word_sample.pronunciation,
-                translated_text=ret.word_sample.translated_text,
-                orig_text=ret.input_text,
-            ))
-            validate_result_word(word_sample, ret.input_text)
+            validate_result_word(sample, ret.input_text)
         except WordInvalidForAdding as e:
             console.print(f'Unable to add "{word_sample.word}", reason: {e}', style='grey42')
-            return NoActionResult(words=word_sample, stored_to_voc_book=False, error=str(e))
+            failed_words.append(sample)
+        else:
+            words.append(sample)
 
-        word_store.add(word_sample)
-        console.print(
-            (
-                f'[bold]"{word_sample.word}"[/bold] was added to your vocabulary book ([bold]{word_store.count()}[/bold] '
-                'in total), well done!\n'
-            ),
-            style='grey42',
-        )
+    if not words:
+        return NoActionResult(failed_words=failed_words, error='failed_to_add')
 
+    word_store = get_word_store()
+    for word in words:
+        word_store.add(word)
+    console.print(
+        (
+            'New word(s) added to your vocabulary book: [bold]"{}"[/bold] ([bold]{}[/bold] '
+            'in total), well done!\n'.format(','.join(w.word for w in words), word_store.count())
+        ),
+        style='grey42',
+    )
     LastActionResult.trans_result = None
-    return NoActionResult(words=word_samplelist, stored_to_voc_book=True)
+    return NoActionResult(words=words, failed_words=failed_words, stored_to_voc_book=True)
 
 
 class ManuallySelector:
@@ -418,7 +431,7 @@ class ManuallySelector:
 
     choice_skip = 'None of above, skip for now.'
 
-    def remove_word_fromPreAction(self, word: WordSample):
+    def discard_word(self, word: WordSample):
         """Remove the last action word for prepare for the next action"""
         # Remove last word
         get_word_store().remove(word.word)
@@ -432,27 +445,28 @@ class ManuallySelector:
         )
         return get_word_choices(text, known_words)
 
-    def get_user_word_selection(self, choices: List[WordChoice]) -> list[WordChoice]:
-        """Get the words which the user selected
+    def get_user_words_selection(self, choices: List[WordChoice]) -> List[WordChoice]:
+        """Get the words user has selected
 
-        :return: None if user give up selection
+        :return: A list of WordChoice object, might be empty if user choose to skip
+            or select none.
         """
         # Read user input
         str_choices = [w.get_console_display() for w in choices] + [self.choice_skip]
-        choices_from_user = self.prompt_select_word(str_choices)
+        answers = self.prompt_select_words(str_choices)
 
         # Get the WordChoice, turn it into WordSample and save to vocabulary book
-        foramted_choices = [WordChoice]
-        for a in choices_from_user:
-            # Check if user give up choosing
-            if a == self.choice_skip:
-                return None
-            foramted_choices.append(WordChoice.extract_word(a))
-        word_choice = [w for w in choices if w.word in foramted_choices]
-        return word_choice
+        word_str_list: List[str] = []
+        for answer in answers:
+            # Return empty list if the "skip" option is selected
+            if answer == self.choice_skip:
+                return []
+            word_str_list.append(WordChoice.extract_word(answer))
+        return [w for w in choices if w.word in word_str_list]
 
-    def prompt_select_word(self, str_choices: List[str]) -> str:
-        return questionary.checkbox("Choose the word you don't know", choices=str_choices).ask()
+    def prompt_select_words(self, str_choices: List[str]) -> List[str]:
+        """Call terminal to prompt user to select the word(s) he/she doesn't know"""
+        return questionary.checkbox("Choose the word(s) you don't know", choices=str_choices).ask()
 
 
 # The default number of words used for writing the story
@@ -608,7 +622,11 @@ def format_words(words: List[WordSample]) -> Table:
             w.word,
             w.pronunciation,
             w.get_word_meaning_display(),
-            highlight_words(w.orig_text, [w.word]) + '\n' + "[grey42]" + w.translated_text + "[/grey42]",
+            highlight_words(w.orig_text, [w.word])
+            + '\n'
+            + "[grey42]"
+            + w.translated_text
+            + "[/grey42]",
         )
     return table
 

@@ -108,7 +108,7 @@ class TestCmdNo:
             ret = handle_cmd_no()
             assert get_word_store().exists('foo') is False
             assert ret.error == 'openai_svc_error'
-            mocker.assert_called_once_with('foo bar', set()) # Since we dont use dicard(mastered) anymore, {'foo'} -> set()
+            mocker.assert_called_once_with('foo bar', set())
 
     def test_no_choices_error(self, has_last_added_word):
         with mock.patch('voc_builder.interactive.get_word_choices', return_value=[]):
@@ -122,8 +122,8 @@ class TestCmdNo:
                 WordChoice(word='bar', word_normal='bar', word_meaning='bar', pronunciation='')
             ],
         ), mock.patch(
-            'voc_builder.interactive.ManuallySelector.prompt_select_word',
-            return_value=ManuallySelector.choice_skip,
+            'voc_builder.interactive.ManuallySelector.prompt_select_words',
+            return_value=[ManuallySelector.choice_skip],
         ):
             ret = handle_cmd_no()
             assert ret.error == 'user_skip'
@@ -135,22 +135,23 @@ class TestCmdNo:
                 WordChoice(word='bar', word_normal='bar', word_meaning='bar', pronunciation='')
             ],
         ), mock.patch(
-            'voc_builder.interactive.ManuallySelector.prompt_select_word',
+            'voc_builder.interactive.ManuallySelector.prompt_select_words',
             return_value=['bar'],
         ):
             get_mastered_word_store().add('bar')
             ret = handle_cmd_no()
-            assert ret.words and ret.words.word == 'bar'
-            assert ret.error == 'already mastered'
+            assert not ret.words
+            assert ret.failed_words[0].word == 'bar'
+            assert ret.error == 'failed_to_add'
 
-    def test_normal(self, has_last_added_word):
+    def test_check_single(self, has_last_added_word):
         with mock.patch(
             'voc_builder.interactive.get_word_choices',
             return_value=[
                 WordChoice(word='bar', word_normal='bar', word_meaning='bar', pronunciation='')
             ],
         ), mock.patch(
-            'voc_builder.interactive.ManuallySelector.prompt_select_word',
+            'voc_builder.interactive.ManuallySelector.prompt_select_words',
             return_value=['bar'],
         ):
             ret = handle_cmd_no()
@@ -160,16 +161,16 @@ class TestCmdNo:
             assert ret.error == ''
             assert LastActionResult.trans_result is None
 
-    def test_multi_options(self, has_last_added_word):
+    def test_check_multi(self, has_last_added_word):
         with mock.patch(
             'voc_builder.interactive.get_word_choices',
             return_value=[
                 WordChoice(word='bar', word_normal='bar', word_meaning='bar', pronunciation=''),
                 WordChoice(word='foo', word_normal='foo', word_meaning='foo', pronunciation=''),
-                ],
+            ],
         ), mock.patch(
-                'voc_builder.interactive.ManuallySelector.prompt_select_word',
-                return_value=['bar', 'foo'],
+            'voc_builder.interactive.ManuallySelector.prompt_select_words',
+            return_value=['bar', 'foo'],
         ):
             ret = handle_cmd_no()
             assert get_word_store().exists('bar') is True
@@ -179,6 +180,7 @@ class TestCmdNo:
             assert ret.stored_to_voc_book is True
             assert ret.error == ''
             assert LastActionResult.trans_result is None
+
 
 class TestCmdStory:
     def test_not_enough_words(self):
