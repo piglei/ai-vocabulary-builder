@@ -8,7 +8,7 @@ from threading import Thread
 from typing import ClassVar, List, Optional
 
 import questionary
-from prompt_toolkit import prompt
+from prompt_toolkit import PromptSession
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.styles import Style
 from rich.console import Console
@@ -23,6 +23,7 @@ from voc_builder.builder import migrate_builder_data_to_store
 from voc_builder.commands.exceptions import CommandSyntaxError, NotCommandError
 from voc_builder.commands.parsers import ListCmdParser, ListCommandExpr
 from voc_builder.exceptions import OpenAIServiceError, WordInvalidForAdding
+from voc_builder.int_commands.remove import handle_cmd_remove
 from voc_builder.models import LiveStoryInfo, LiveTranslationInfo, WordChoice, WordSample
 from voc_builder.openai_svc import get_story, get_translation, get_uncommon_word, get_word_choices
 from voc_builder.store import get_mastered_word_store, get_word_store
@@ -37,6 +38,8 @@ console = Console()
 COMMAND_NO = 'no'
 # story: make a stroy from least recent used words
 COMMAND_STORY = 'story'
+# remove: enter interactive mode to remove words from vocabulary book
+COMMAND_REMOVE = 'remove'
 
 
 class LastActionResult:
@@ -143,13 +146,15 @@ def enter_interactive_mode():  # noqa: C901
         * [bold]story[/bold]: Recall words by reading a story written by AI
         * [bold]list {limit}[/bold]: List recently added words. Args:
           - [underline]limit[/underline]: optional, a number or "all", defaults to 10.
+        * [bold]remove[/bold]: Enter "remove" mode, remove words from your vocabulary book.
         * [Ctrl+c] to quit'''
             ).strip(),
             title='Welcome to AI Vocabulary Builder!',
         )
     )
+    session: PromptSession = PromptSession()
     while True:
-        text = prompt(
+        text = session.prompt(
             HTML('<tip>Enter text</tip><arrow>&gt;</arrow> '), style=prompt_style
         ).strip()
         if not text:
@@ -159,6 +164,9 @@ def enter_interactive_mode():  # noqa: C901
             continue
         elif text == COMMAND_STORY:
             LastActionResult.story_result = handle_cmd_story()
+            continue
+        elif text == COMMAND_REMOVE:
+            handle_cmd_remove()
             continue
 
         # Try different command parsers
