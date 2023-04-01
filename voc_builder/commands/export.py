@@ -48,11 +48,11 @@ def build_ascii_table() -> Table:
     """Build the Table object for display"""
     table = Table(title='', show_header=True)
     table.add_column("#")
-    table.add_column("单词")
-    table.add_column("发音")
-    table.add_column("释义", overflow='fold', max_width=24)
-    table.add_column("例句 / 翻译", overflow='fold')
-    table.add_column("添加时间")
+    table.add_column("Word")
+    table.add_column("Pronunciation")
+    table.add_column("Definition", overflow='fold', max_width=24)
+    table.add_column("Example sentence / Translation", overflow='fold')
+    table.add_column("Date added")
     for i, w in enumerate(get_word_store().all(), start=1):
         table.add_row(
             str(i),
@@ -71,7 +71,14 @@ class VocCSVWriter:
     :param fp: The file object
     """
 
-    header_row = ('#', '单词', '读音', '释义', '例句/翻译', '添加时间')
+    header_row = (
+        '#',
+        'Word',
+        'Pronunciation',
+        'Definition',
+        'Example sentence / Translation',
+        'Date added',
+    )
 
     def write_to(self, fp: TextIO):
         """Write to the given file object"""
