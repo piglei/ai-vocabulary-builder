@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import openai
 
@@ -176,43 +176,63 @@ def parse_word_choices_reply(reply_text: str) -> List[WordChoice]:
     :return: A list of WordChoice object
     :raise: ValueError when the given reply text can not be parsed
     """
-    # Get all of the key value pairs from text first
-    raw_items: List[Tuple[str, str]] = []
-    for line in reply_text.split('\n'):
-        if ':' not in line:
-            continue
+    return WordChoicesParser().parse(reply_text)
 
-        key, value = line.split(':', 1)
-        key = key.strip(' -').lower()
-        raw_items.append((key, value.strip()))
 
-    choices: List[WordChoice] = []
-    current_choice = None
-    for key, value in raw_items:
-        # The reply may use non-standard keys sometimes
-        if key in ['word', 'unknown-word', 'unknown word']:
-            # Word has changed, push last word in to result list
-            if current_choice:
-                choices.append(WordChoice(**current_choice))
+class WordChoicesParser:
+    """Parser for getting the word choices from OpenAI API's reply"""
 
-            current_choice = {'word': value}
-        if not current_choice:
-            continue
-        if key == 'meaning':
-            current_choice['word_meaning'] = value
-        elif key == 'normal_form':
-            current_choice['word_normal'] = value
-        elif key == 'pronunciation':
-            current_choice['pronunciation'] = value
+    def parse(self, reply_text: str) -> List[WordChoice]:
+        fields_list = self._get_choice_fields_list(reply_text)
 
-    # Push the last word in to result list
-    if current_choice:
-        choices.append(WordChoice(**current_choice))
+        # Validate the choice dict and convert to WordChoice object
+        choices: List[WordChoice] = []
+        for d in fields_list:
+            try:
+                choices.append(WordChoice(**d))
+            except TypeError:
+                raise ValueError(f'Invalid word choice dict: {d}')
 
-    # The word was surrounded by {} sometimes, remove
-    for c in choices:
-        c.word = c.word.strip('{}').lower()
-    return choices
+        # The word was surrounded by {} sometimes, remove
+        for c in choices:
+            c.word = c.word.strip('{}').lower()
+        return choices
+
+    def _get_choice_fields_list(self, reply_text: str) -> List[Dict[str, str]]:
+        """Get a list of word choice fields by parsing the reply text"""
+        # Get all of the key value pairs from text first
+        raw_items: List[Tuple[str, str]] = []
+        for line in reply_text.split('\n'):
+            if ':' not in line:
+                continue
+
+            key, value = line.split(':', 1)
+            key = key.strip(' -').lower()
+            raw_items.append((key, value.strip()))
+
+        choices_dicts: List[Dict[str, str]] = []
+        current_choice = None
+        for key, value in raw_items:
+            # The reply may use non-standard keys sometimes
+            if key in ['word', 'unknown-word', 'unknown word']:
+                # Word has changed, push last word in to result list
+                if current_choice:
+                    choices_dicts.append(current_choice)
+
+                current_choice = {'word': value}
+            if not current_choice:
+                continue
+            if key == 'meaning':
+                current_choice['word_meaning'] = value
+            elif key == 'normal_form':
+                current_choice['word_normal'] = value
+            elif key == 'pronunciation':
+                current_choice['pronunciation'] = value
+
+        # Push the last word in to result list
+        if current_choice:
+            choices_dicts.append(current_choice)
+        return choices_dicts
 
 
 # The prompt being used to generate stroy from words
