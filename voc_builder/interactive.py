@@ -231,7 +231,7 @@ def handle_cmd_trans(text: str) -> TransActionResult:
     known_words = word_store.filter(orig_words) | mastered_word_s.filter(orig_words)
 
     console.print('\n')
-    progress = Progress(SpinnerColumn(), TextColumn("[bold blue] 正在提取生词"))
+    progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Extracting word"))
     with progress:
         task_id = progress.add_task("get", start=False)
         # Get the uncommon word
@@ -255,7 +255,7 @@ def handle_cmd_trans(text: str) -> TransActionResult:
             orig_text=trans_ret.text,
         )
 
-    console.print(f'> The word AI has chosen is "[bold]{word.word}[/bold]".\n')
+    console.print(f'> The new word AI has chosen is "[bold]{word.word}[/bold]".\n')
 
     try:
         validate_result_word(word, text)
@@ -274,10 +274,11 @@ def handle_cmd_trans(text: str) -> TransActionResult:
     console.print(
         (
             f'[bold]"{word.word}"[/bold] was added to your vocabulary book ([bold]{word_store.count()}[/bold] '
-            'in total), well done!\n'
+            'in total), well done!'
         ),
         style='grey42',
     )
+    console.print('Hint: use "no" command to choose other words.\n', style='grey42')
     return TransActionResult(input_text=text, stored_to_voc_book=True, word_sample=word)
 
 
@@ -321,11 +322,11 @@ class LiveTransRenderer:
         :param text: The original text.
         :param translated: The translated result text.
         """
-        table = Table(title="翻译结果", show_header=False)
-        table.add_column("title")
-        table.add_column("detail", overflow='fold')
-        table.add_row("[bold]原文[/bold]", f'[grey42]{text}[grey42]')
-        table.add_row(Text('翻译中 ') + self.spinner.render(time.time()), translated)
+        table = Table(title="Translation Result", show_header=False)
+        table.add_column("Title")
+        table.add_column("Detail", overflow='fold')
+        table.add_row("[bold]Original Text[/bold]", f'[grey42]{text}[grey42]')
+        table.add_row(Text('Translating ') + self.spinner.render(time.time()), translated)
         return table
 
 
@@ -336,11 +337,11 @@ def gen_translated_table(text: str, translated: str):
     :param translated: The translated result text.
     :param word: The chosen word.
     """
-    table = Table(title="翻译结果", show_header=False)
-    table.add_column("title")
-    table.add_column("detail", overflow='fold')
-    table.add_row("[bold]原文[/bold]", f'[grey42]{text}[grey42]')
-    table.add_row("[bold]中文翻译[/bold]", translated)
+    table = Table(title="Translation Result", show_header=False)
+    table.add_column("Title")
+    table.add_column("Detail", overflow='fold')
+    table.add_row("[bold]Original Text[/bold]", f'[grey42]{text}[grey42]')
+    table.add_row("[bold]Translation[/bold]", translated)
     return table
 
 
@@ -612,11 +613,11 @@ def validate_result_word(word: WordSample, orig_text: str):
 
 def format_words(words: List[WordSample]) -> Table:
     """Format a list of words as a rich table"""
-    table = Table(title='生词详情', show_header=True)
-    table.add_column("单词")
-    table.add_column("发音")
-    table.add_column("释义", overflow='fold', max_width=24)
-    table.add_column("历史例句 / 翻译", overflow='fold')
+    table = Table(title='Words Details', show_header=True)
+    table.add_column("Word")
+    table.add_column("Pronunciation")
+    table.add_column("Definition", overflow='fold', max_width=24)
+    table.add_column("Example sentence / Translation", overflow='fold')
     for w in words:
         table.add_row(
             w.word,
@@ -637,8 +638,8 @@ def format_single_word(word: WordSample) -> Table:
     :parm word: The word sample object
     """
     table = Table(title="", show_header=True)
-    table.add_column("单词")
-    table.add_column("发音")
-    table.add_column("释义", overflow='fold')
+    table.add_column("Word")
+    table.add_column("Pronunciation")
+    table.add_column("Definition", overflow='fold')
     table.add_row(word.word, word.pronunciation, word.get_word_meaning_display())
     return table

@@ -60,16 +60,22 @@ Enter text> It depicted simply an enormous face, more than a metre wide
 按下回车后，工具会开始翻译工作。它首先会将你所输入内容的中文翻译打印到屏幕上。然后，它会从原文中提取出一个**你最有可能不认识的单词**，将其加入到生词本中。
 
 ```
-> 中文翻译：简单地描绘出一个超过一米宽的巨大面孔。
+                              Translation Result
+┌───────────────┬─────────────────────────────────────────────────────────────┐
+│ Original Text │ It depicted simply an enormous face, more than a metre wide │
+│ Translation   │ 它只是简单地描绘了一个巨大的面孔，超过一米宽。              │
+└───────────────┴─────────────────────────────────────────────────────────────┘
 
-> The word AI has chosen is "depicted".
 
-┏━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┓
-┃ 单词     ┃ 发音        ┃ 释义       ┃
-┡━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━┩
-│ depicted │ /dɪˈpɪktɪd/ │ 描绘，描述 │
-└──────────┴─────────────┴────────────┘
-"depicted" was added to your vocabulary book (1 in total), well done!
+⠴  Extracting word
+> The new word AI has chosen is "depicted".
+
+┏━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Word     ┃ Pronunciation ┃ Definition                 ┃
+┡━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ depicted │ /dɪˈpɪkt/     │ 描述，描绘（原词：depict） │
+└──────────┴───────────────┴────────────────────────────┘
+"depicted" was added to your vocabulary book (78 in total), well done!
 ```
 
 #### 重选生词
@@ -80,22 +86,24 @@ Enter text> It depicted simply an enormous face, more than a metre wide
 Enter text> no
 ```
 
-上一次被添加到生词本的单词会被丢弃（加入到“已掌握”词库中），工具将尝试返回另外 3 个可能的生词，如下所示：
+上一次被添加到生词本的单词会被丢弃，工具将尝试重新返回 4 个新生词（可能包含刚被丢弃的词），如下所示：
 
 ```
-"depicted" was discarded, preparing other words...
-⠦  Querying OpenAI API
-? Choose the word you don't know (Use arrow keys)
-   simply / ['sɪmpli] / 简单地，仅仅
- » enormous / [ɪˈnɔːməs] / 巨大的，庞大的
-   metre / ['miːtə(r)] / 米，公尺
-   None of above, skip for now.
+"depicted" has been discarded from your vocabulary book.
+⠋  Extracting multiple new words
+? Choose the word(s) you don't know (Use arrow keys to move, <space> to select, <a> to toggle, <i> to invert)
+ » ○ depicted / （原词：depict） / dɪˈpɪkt / 描绘，描述
+   ○ metre / （原词：meter） / ˈmiːtə(r) / 米
+   ○ simply / ˈsɪmpli / 简而言之，仅仅
+   ○ enormous / ɪˈnɔːməs / 巨大的，庞大的
+   ○ None of above, skip for now.
 ```
 
-请使用↑↓方向键选择你想要的词，按下回车确认。该单词会被添加到你的生词本中。
+请按↑↓方向键移动游标，按空格选中你想要的词（支持多选），按下回车确认。选中的单词会被添加到你的生词本中。
 
 ```
-"enormous" was added to your vocabulary book (1 in total), well done!
+? Choose the word(s) you don't know done (2 selections)
+New word(s) added to your vocabulary book: "metre,enormous" (79 in total), well done!
 ```
 
 假如你所想的单词仍然没有出现在选项中，请选择 `None of above, skip for now.`，跳过本次添加。
