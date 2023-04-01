@@ -113,7 +113,7 @@ def get_uncommon_word(text: str, known_words: Set[str]) -> WordChoice:
 def get_word_choices(text: str, known_words: Set[str]) -> List[WordChoice]:
     """Get a choices of words in given text"""
     try:
-        reply = query_get_word_choices(text, known_words, limit=3)
+        reply = query_get_word_choices(text, known_words, limit=4)
     except Exception as e:
         raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
     try:
