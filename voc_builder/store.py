@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set
 
+import pendulum
 from tinydb import Query, TinyDB
 
 from voc_builder import config
@@ -79,6 +80,11 @@ class WordDetailedObj:
     def date_added(self) -> str:
         """Return a well formatted date added string for display"""
         return datetime.datetime.fromtimestamp(self.ts_date_added).strftime('%Y-%m-%d %H:%M')
+
+    @property
+    def date_added_diff_for_humans(self) -> str:
+        """Return a string like "3 days ago" or "2 hours ago" for display"""
+        return pendulum.from_timestamp(self.ts_date_added).diff_for_humans()
 
 
 class WordStore:
@@ -181,6 +187,18 @@ class WordStore:
         """
         for d in self._db.all():
             yield self._to_detailed_obj(d)
+
+    def search(self, keyword: str, order_by: str = 'date_added') -> Iterable[WordDetailedObj]:
+        """Search for words by keyword
+
+        :param keyword: The search keyword, part of a word.
+        :param order_by: The order of the result.
+        :return: A generator of detailed word objects.
+        """
+        results = sorted(self.all(), key=lambda obj: obj.ts_date_added)
+        for obj in results:
+            if keyword.lower() in obj.ws.word.lower():
+                yield obj
 
     def remove(self, word: str) -> List[int]:
         """Remove a word

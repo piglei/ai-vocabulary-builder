@@ -94,6 +94,13 @@ class TestWordStore:
         word_store.add(WordSample.make_empty('python'))
         assert word_store.filter({'foo', 'python', 'bar'}) == {'python'}
 
+    def test_search(self, tmp_path):
+        word_store = WordStore(tmp_path / 'foo.json')
+        word_store.add(WordSample.make_empty('program'))
+        word_store.add(WordSample.make_empty('python'))
+        # Search is case insensitive
+        assert list(word_store.search('Py'))[0].ws.word == 'python'
+
 
 class TestDifferentWordVersion:
     """Test if the word store is able to handle data in legacy versions"""
