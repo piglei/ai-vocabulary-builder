@@ -25,7 +25,7 @@ jobs:
     strategy:
       matrix:
         os: [Ubuntu, macOS, Windows]
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - os: Ubuntu
             image: ubuntu-22.04
@@ -84,7 +84,7 @@ jobs:
         run: poetry lock --check
 
       - name: Install dependencies
-        run: poetry install --with github-actions
+        run: poetry install
 
       - name: Run pytest
         run: poetry run pytest -v
