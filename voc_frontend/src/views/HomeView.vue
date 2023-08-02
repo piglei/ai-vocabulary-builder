@@ -84,7 +84,7 @@ function extractWord() {
 
   // Create the SSE stream
   const source = new EventSource(
-    window.API_ENDPOINT + '/translations/?user_text=' + encodeURIComponent(state.userText)
+    window.API_ENDPOINT + '/api/translations/?user_text=' + encodeURIComponent(state.userText)
   )
 
   source.addEventListener('trans_partial', (event) => {
@@ -125,7 +125,7 @@ async function extractWordSample(origText: string, translatedText: string) {
 
   let resp
   try {
-    resp = await axios.post(window.API_ENDPOINT + '/word_samples/extractions/', {
+    resp = await axios.post(window.API_ENDPOINT + '/api/word_samples/extractions/', {
       orig_text: origText,
       translated_text: translatedText
     })
@@ -154,7 +154,7 @@ async function undoShowChoices() {
 
   // Remove the word sample first
   try {
-    await axios.post(window.API_ENDPOINT + '/word_samples/deletion/', [wordSample.value.word])
+    await axios.post(window.API_ENDPOINT + '/api/word_samples/deletion/', [wordSample.value.word])
   } catch (error) {
     // Ignore error when unable to delete
   }
@@ -167,7 +167,7 @@ async function undoShowChoices() {
   // Extract a list of uncommon words for the user to choose from
   let resp
   try {
-    resp = await axios.post(window.API_ENDPOINT + '/word_choices/extractions/', {
+    resp = await axios.post(window.API_ENDPOINT + '/api/word_choices/extractions/', {
       orig_text: transResult.value.origText,
       translated_text: transResult.value.translatedText
     })
@@ -196,7 +196,7 @@ async function saveChoices() {
 
   let resp
   try {
-    resp = await axios.post(window.API_ENDPOINT + '/word_choices/save/', {
+    resp = await axios.post(window.API_ENDPOINT + '/api/word_choices/save/', {
       orig_text: transResult.value.origText,
       translated_text: transResult.value.translatedText,
       choices: checkedWordObjs

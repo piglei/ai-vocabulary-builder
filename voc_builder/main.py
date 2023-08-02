@@ -1,10 +1,15 @@
 """Main entrance of AI Vocabulary Builder"""
+import requests
 import logging
 import sys
+import time
+import webbrowser
+import threading
 from typing import List, Optional
 
 import click
 import openai
+import uvicorn
 from rich.console import Console
 
 from voc_builder import __version__
@@ -95,6 +100,59 @@ def export(format: str, file_path: Optional[str]):
 @click.argument('words', nargs=-1)
 def remove(hard_remove: bool, words: List[str]):
     handle_remove(words, hard_remove)
+
+
+@main.command(help='Start the notebook server')
+@click.option('--api-key', envvar='OPENAI_API_KEY', required=True, help='Your OpenAI API key')
+@click.option(
+    '--log-level', type=str, default='INFO', help='Log level, change it to DEBUG to see more logs'
+)
+@click.option(
+    '--api-base', envvar='OPENAI_API_BASE', required=False, help='The OpenAI API base address'
+)
+@click.option('--host', type=str, default='127.0.0.1', help='The host of notebook server')
+@click.option('--port', type=int, default=16093, help='The host of notebook server')
+def notebook(
+    api_key: str,
+    log_level: str,
+    host: str,
+    port: int,
+    api_base: Optional[str] = None,
+):
+    # Set logging level
+    logger.setLevel(getattr(logging, log_level.upper()))
+
+    openai.api_key = api_key
+    # Set the API base address if given
+    if api_base:
+        openai.api_base = api_base
+
+    def _open_in_browser():
+        """Open the notebook in browser"""
+        retries = 0
+        addr = f'http://{host}:{port}'
+        while retries < 10:
+            time.sleep(1)
+            try:
+                requests.get(addr)
+            except requests.exceptions.RequestException:
+                retries += 1
+                continue
+
+            webbrowser.open(addr)
+            break
+
+    threading.Thread(target=_open_in_browser, daemon=True).start()
+
+    print('Starting the notebook server...')
+    uvicorn.run(
+        "voc_builder.notepad.server:app",
+        host=host,
+        port=port,
+        log_level=log_level.lower(),
+        reload=False,
+        workers=2,
+    )
 
 
 if __name__ == '__main__':

@@ -31,7 +31,7 @@ onUpdated(() => {
 async function getWords() {
   let resp
   try {
-    resp = await axios.get(window.API_ENDPOINT + '/word_samples/')
+    resp = await axios.get(window.API_ENDPOINT + '/api/word_samples/')
   } catch (error) {
     const msg = error.resposne ? error.response.data.message : error.message
     notyf.error('Error requesting API: ' + msg)
@@ -49,7 +49,7 @@ async function getWords() {
 // TODO: Add confirmation
 async function removeWord(word) {
   try {
-    await axios.post(window.API_ENDPOINT + '/word_samples/deletion/', [word])
+    await axios.post(window.API_ENDPOINT + '/api/word_samples/deletion/', [word])
   } catch (error) {
     const msg = error.resposne ? error.response.data.message : error.message
     notyf.error('Error requesting API: ' + msg)
