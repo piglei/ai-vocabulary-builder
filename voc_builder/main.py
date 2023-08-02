@@ -1,14 +1,14 @@
 """Main entrance of AI Vocabulary Builder"""
-import requests
 import logging
 import sys
+import threading
 import time
 import webbrowser
-import threading
 from typing import List, Optional
 
 import click
 import openai
+import requests
 import uvicorn
 from rich.console import Console
 
