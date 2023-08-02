@@ -1,11 +1,14 @@
 [tool.poetry]
 name = "ai-vocabulary-builder"
-version = "0.5.0"
+version = "0.6.0"
 description = "A tool help you build your vocabulary book using AI."
 readme = "README.md"
 authors = ["piglei <piglei2007@gmail.com>"]
 packages = [
     { include = "voc_builder", from="." },
+]
+include = [
+    { path = "voc_builder/notepad/dist/**/*"},
 ]
 
 
