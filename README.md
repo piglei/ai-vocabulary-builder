@@ -35,7 +35,7 @@ pip install ai-vocabulary-builder
 export OPENAI_API_KEY='your_api_key'
 ```
 
-之后执行 `aivoc run` 启动工具，进入交互式命令行模式。
+之后执行 `aivoc run` 启动工具，进入交互式命令行模式。或者执行 `aivoc notebook`，在浏览器中打开可交互式 Web App（推荐）。
 
 除环境变量外，你也可以通过 `--api-key` 参数完成设置：
 
@@ -44,6 +44,10 @@ aivoc run --api-key "your_api_key"
 ```
 
 ## 使用指南
+
+### 使用 Web App
+
+执行 `aivoc notebook` 命令，使用可交互式 Web App。
 
 ### 交互式命令行
 
