@@ -72,7 +72,6 @@ async function removeWord(word) {
       <table class="table table-striped words-list mt-3" v-if="words.length > 0">
         <colgroup>
           <col span="1" style="width: 120px" />
-          <col span="1" style="width: 80px" />
           <col span="1" />
           <col span="1" />
           <col span="1" style="width: 120px" />
@@ -82,7 +81,6 @@ async function removeWord(word) {
         <thead>
           <tr>
             <th scope="col">Word</th>
-            <th scope="col">Pronunciation</th>
             <th scope="col">Definition</th>
             <th scope="col">Example sentence / Translation</th>
             <th scope="col">Date Added</th>
@@ -92,9 +90,9 @@ async function removeWord(word) {
         <tbody>
           <tr v-for="word of words" :key="word.ws.word">
             <td>
-              <span class="word">{{ word.ws.word }}</span>
+              <div class="word mb-1">{{ word.ws.word }}</div>
+              <div class="pronun text-secondary">{{ word.ws.pronunciation }}</div>
             </td>
-            <td>{{ word.ws.pronunciation }}</td>
             <td>{{ word.ws.word_meaning }}</td>
             <td>
               {{ word.ws.orig_text }} /
@@ -120,7 +118,10 @@ async function removeWord(word) {
   font-size: 13px;
 }
 .words-list .word {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
+}
+.words-list .proun {
+  font-size: 13px;
 }
 </style>
