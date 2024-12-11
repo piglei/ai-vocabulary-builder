@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ai-vocabulary-builder"
-version = "0.6.1"
+version = "0.7.0"
 description = "A tool help you build your vocabulary book using AI."
 readme = "README.md"
 authors = ["piglei <piglei2007@gmail.com>"]
