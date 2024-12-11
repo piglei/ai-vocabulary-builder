@@ -15,7 +15,12 @@ from typing_extensions import Annotated
 
 from voc_builder.exceptions import OpenAIServiceError, WordInvalidForAdding
 from voc_builder.models import LiveTranslationInfo, WordSample
-from voc_builder.openai_svc import get_translation, get_uncommon_word, get_word_choices
+from voc_builder.openai_svc import (
+    get_translation,
+    get_uncommon_word,
+    get_word_choices,
+    get_word_manually,
+)
 from voc_builder.store import get_mastered_word_store, get_word_store
 from voc_builder.utils import tokenize_text
 
@@ -219,6 +224,44 @@ def list_word_samples():
     # Remove the fields not necessary, sort by -date_added
     words_refined = [{"ws": obj.ws, "ts_date_added": obj.ts_date_added} for obj in reversed(words)]
     return {"words": words_refined, "count": len(words)}
+
+
+class ManuallySaveRequest(BaseModel):
+    orig_text: str = Field(..., min_length=1)
+    translated_text: str = Field(..., min_length=1)
+    word: str = Field(..., min_length=1)
+
+
+@app.post("/api/word_samples/manually_save/")
+def manually_save(req: ManuallySaveRequest, response: Response):
+    """Manually save a word to the store."""
+    word_store = get_word_store()
+
+    try:
+        choice = get_word_manually(req.orig_text, req.word)
+    except Exception as exc:
+        logger.exception("Error get word manually.")
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"error": "service_error", "message": str(exc)}
+
+    word_sample = WordSample(
+        word=choice.word,
+        word_normal=choice.word_normal,
+        word_meaning=choice.word_meaning,
+        pronunciation=choice.pronunciation,
+        translated_text=req.translated_text,
+        orig_text=req.orig_text,
+    )
+
+    try:
+        validate_result_word(word_sample, req.orig_text)
+    except WordInvalidForAdding as e:
+        logger.exception(f'Unable to add "{word_sample.word}", reason: {e}')
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"error": "word_invalid", "message": f"the word is invalid: {e}"}
+
+    word_store.add(word_sample)
+    return {"word_sample": word_sample, "count": word_store.count()}
 
 
 def validate_result_word(word: WordSample, orig_text: str):
