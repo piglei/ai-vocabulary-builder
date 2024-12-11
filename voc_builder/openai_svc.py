@@ -69,7 +69,7 @@ def query_translation(text: str, stream_handler: Optional[StreamHandler] = None)
     """
     user_content = prompt_main_user_tmpl.format(text=text)
     completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         stream=True,
         messages=[
             {"role": "system", "content": prompt_main_system},
@@ -126,6 +126,22 @@ def get_word_choices(text: str, known_words: Set[str]) -> List[WordChoice]:
         raise OpenAIServiceError(e)
 
 
+def get_word_manually(text: str, word: str) -> WordChoice:
+    """Get a word that is manually selected by user."""
+    try:
+        reply = query_get_word_manually(text, word)
+    except Exception as e:
+        raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
+    try:
+        items = parse_word_choices_reply(reply)
+    except ValueError as e:
+        raise OpenAIServiceError(e)
+
+    if not items:
+        raise OpenAIServiceError('reply contains no word')
+    return items[0]
+
+
 # The prompt being used to extract multiple words
 prompt_word_choices_system = """You are a translation assistant, I will give you a paragraph of english and a list of words called "known-words" which is divided by ",", please find out the top {limit} rarely used word in the paragraph(the word must not in "known-words"). Get the normal form, the simplified Chinese meaning and the pronunciation of each word.
 
@@ -146,6 +162,26 @@ The paragraph is:
 
 {text}"""
 
+prompt_word_manually_system = """You are a translation assistant, I will give you a paragraph of english and a word in the paragraph.
+Get the normal form, the simplified Chinese meaning and the pronunciation of the word.
+
+Your answer should be separated into 4 different lines, each line's content is as below:
+
+word: {{word}}
+normal_form: {{normal_form_of_word}}
+pronunciation: {{pronunciation}}
+meaning: {{chinese_meaning_of_word}}
+
+The answer should contains no extra content.
+"""  # noqa: E501
+
+prompt_word_manually_user_tmpl = """\
+The paragraph is:
+
+{text}
+
+The word is: {word}"""
+
 
 def query_get_word_choices(text: str, known_words: Set[str], limit: Optional[int] = 3) -> str:
     """Query OpenAI to get the translation results.
@@ -157,9 +193,28 @@ def query_get_word_choices(text: str, known_words: Set[str], limit: Optional[int
         text=text, known_words=','.join(known_words)
     )
     completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": prompt_word_choices_system.format(limit=limit)},
+            {"role": "user", "content": user_content},
+            # Use a single "user" message at this moment because "system" role doesn't perform better
+            # {"role": "user", "content": prompt_word_choices_system + '\n' + user_content},
+        ],
+    )
+    logger.debug('Completion API returns: %s', completion)
+    return completion.choices[0].message.content.strip()
+
+
+def query_get_word_manually(text: str, word: str) -> str:
+    """Query OpenAI to get the meaning of manually selected word.
+
+    :return: Well formatted string contains word and meaning.
+    """
+    user_content = prompt_word_manually_user_tmpl.format(text=text, word=word)
+    completion = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": prompt_word_manually_system},
             {"role": "user", "content": user_content},
             # Use a single "user" message at this moment because "system" role doesn't perform better
             # {"role": "user", "content": prompt_word_choices_system + '\n' + user_content},
@@ -278,7 +333,7 @@ def query_story(words: List[str], stream_handler: Optional[StreamHandler] = None
     words_str = ','.join(words)
     user_content = prompt_write_story_user_tmpl.format(words=words_str)
     completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         stream=True,
         messages=[
             # Use a single "user" message at this moment because "system" role doesn't perform better
