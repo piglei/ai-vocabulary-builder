@@ -25,6 +25,13 @@
               <router-link class="nav-link" to="/manage">Manage</router-link>
             </li>
           </ul>
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <router-link class="nav-link" to="/settings">
+                <i class="bi bi-gear"></i>
+              </router-link>
+            </li>
+          </ul>
         </div>
       </div>
     </nav>

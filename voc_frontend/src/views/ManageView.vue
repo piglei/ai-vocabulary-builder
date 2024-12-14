@@ -62,6 +62,11 @@ async function removeWord(word) {
   notyf.success(`<strong>${word}</strong> has been removed.`)
 }
 
+function playWord(word) {
+  const utterance = new SpeechSynthesisUtterance(word);
+  speechSynthesis.speak(utterance);
+}
+
 </script>
 
 <template>
@@ -90,7 +95,10 @@ async function removeWord(word) {
         <tbody>
           <tr v-for="word of words" :key="word.ws.word">
             <td>
-              <div class="word mb-1">{{ word.ws.word }}</div>
+              <div class="word mb-1">
+                {{ word.ws.word }}
+                <i class="bi bi-volume-up ms-2" @click="playWord(word.ws.word)" style="cursor: pointer;"></i>
+              </div>
               <div class="pronun text-secondary">{{ word.ws.pronunciation }}</div>
             </td>
             <td>{{ word.ws.word_meaning }}</td>

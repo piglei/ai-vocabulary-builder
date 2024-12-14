@@ -2,6 +2,11 @@ import logging
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import openai
+from openai import AsyncOpenAI
+from pydantic import BaseModel
+from pydantic_ai import Agent
+from pydantic_ai.models.gemini import GeminiModel
+from pydantic_ai.models.openai import OpenAIModel
 
 from voc_builder.exceptions import OpenAIServiceError
 from voc_builder.models import (
@@ -11,6 +16,7 @@ from voc_builder.models import (
     WordChoice,
     WordSample,
 )
+from voc_builder.store import get_internal_state_store
 
 logger = logging.getLogger()
 
@@ -19,7 +25,19 @@ logger = logging.getLogger()
 StreamHandler = Callable[[str], Any]
 
 
-def get_translation(text: str, live_info: LiveTranslationInfo) -> TranslationResult:
+class WordChoiceModelResp(BaseModel):
+    """The word returned by LLM service"""
+
+    word: str
+    word_normal: str
+    word_meaning: str
+    pronunciation: str
+
+    def model_post_init(self, __context):
+        self.word = self.word.lower()
+
+
+async def get_translation(text: str, live_info: LiveTranslationInfo) -> TranslationResult:
     """Get the translated content of the given text.
 
     :param text: The text which needs to be translated.
@@ -28,16 +46,12 @@ def get_translation(text: str, live_info: LiveTranslationInfo) -> TranslationRes
     :raise VocBuilderError: when unable to finish the API call or reply is malformed.
     """
 
-    _received = ''
-
     def handle_stream_content(text: str):
         """Extract "translated" and updated the live_info object"""
-        nonlocal _received
-        _received += text
-        live_info.translated_text = _received
+        live_info.translated_text = text
 
     try:
-        reply = query_translation(text, stream_handler=handle_stream_content)
+        reply = await query_translation(text, stream_handler=handle_stream_content)
     except Exception as e:
         raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
     finally:
@@ -51,7 +65,9 @@ def get_translation(text: str, live_info: LiveTranslationInfo) -> TranslationRes
 
 # The prompt being used to translate text
 prompt_main_system = """\
-You are a translation assistant, I will give you a paragraph of english, please translate it into simplified Chinese, the answer should only include the translated content and have no extra content.
+You are a translation assistant, I will give you a paragraph of english, please \
+translate it into simplified Chinese, the answer should only include the translated \
+content and have no extra content.
 """  # noqa: E501
 
 prompt_main_user_tmpl = """\
@@ -61,53 +77,34 @@ The paragraph is:
 """
 
 
-def query_translation(text: str, stream_handler: Optional[StreamHandler] = None) -> str:
+async def query_translation(text: str, stream_handler: Optional[StreamHandler] = None) -> str:
     """Query OpenAI to get the translation.
 
     :param stream_handler: A callback function to handle partial replies.
     :return: Translated text.
     """
     user_content = prompt_main_user_tmpl.format(text=text)
-    completion = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
-        stream=True,
-        messages=[
-            {"role": "system", "content": prompt_main_system},
-            {"role": "user", "content": user_content},
-            # Use a single "user" message at this moment because "system" role doesn't perform better
-            # {"role": "user", "content": prompt_main_system + '\n' + user_content},
-        ],
-    )
-    content = ''
-    for part in completion:
-        logger.debug('Completion API returns: %s', part)
-        delta = part.choices[0].delta
-        delta_content = delta.get('content')
-        if delta_content:
-            # Callback handler function if given
+    prompt = prompt_main_system + '\n' + user_content
+    agent = Agent(create_ai_model())
+    message = ''
+    async with agent.run_stream(prompt) as result:
+        async for message in result.stream():
             if stream_handler:
-                stream_handler(delta_content)
-            content += delta_content
-    # Return the content at once
-    return content.strip()
+                stream_handler(message)
+    return message
 
 
-def get_uncommon_word(text: str, known_words: Set[str]) -> WordChoice:
+async def get_uncommon_word(text: str, known_words: Set[str]) -> WordChoice:
     """Get the most uncommon word in given text"""
     try:
-        reply = query_get_word_choices(text, known_words, limit=1)
+        choices = await query_get_word_choices(text, known_words, limit=1)
     except Exception as e:
         raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
-    try:
-        items = parse_word_choices_reply(reply)
-    except ValueError as e:
-        raise OpenAIServiceError(e)
-
-    if not items:
+    if not choices:
         raise OpenAIServiceError('reply contains no word')
     # NOTE: The replay might contains multiple words, but we only return the first one
     # instead of raising an error.
-    return items[0]
+    return WordChoice(**choices[0].dict())
 
 
 # This default limit of how many new words to extract from the text
@@ -126,33 +123,21 @@ def get_word_choices(text: str, known_words: Set[str]) -> List[WordChoice]:
         raise OpenAIServiceError(e)
 
 
-def get_word_manually(text: str, word: str) -> WordChoice:
+async def get_word_manually(text: str, word: str) -> WordChoice:
     """Get a word that is manually selected by user."""
     try:
-        reply = query_get_word_manually(text, word)
+        item = await query_get_word_manually(text, word)
     except Exception as e:
         raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
-    try:
-        items = parse_word_choices_reply(reply)
-    except ValueError as e:
-        raise OpenAIServiceError(e)
-
-    if not items:
-        raise OpenAIServiceError('reply contains no word')
-    return items[0]
+    return WordChoice(**item.dict())
 
 
 # The prompt being used to extract multiple words
-prompt_word_choices_system = """You are a translation assistant, I will give you a paragraph of english and a list of words called "known-words" which is divided by ",", please find out the top {limit} rarely used word in the paragraph(the word must not in "known-words"). Get the normal form, the simplified Chinese meaning and the pronunciation of each word.
-
-For each word, your answer should be separated into 4 different lines, each line's content is as below:
-
-word: {{word}}
-normal_form: {{normal_form_of_word}}
-pronunciation: {{pronunciation}}
-meaning: {{chinese_meaning_of_word}}
-
-The answer should only include {limit} word, with no extra content.
+prompt_word_choices_system = """You are a translation assistant, I will give you a \
+paragraph of english and a list of words called "known-words" which is divided by ",", \
+please find out the top {limit} rarely used word in the paragraph(the word must not \
+in "known-words"). Reply the word, the normal form, the simplified Chinese meaning and \
+the pronunciation of each word.
 """  # noqa: E501
 
 prompt_word_choices_user_tmpl = """\
@@ -162,18 +147,10 @@ The paragraph is:
 
 {text}"""
 
-prompt_word_manually_system = """You are a translation assistant, I will give you a paragraph of english and a word in the paragraph.
-Get the normal form, the simplified Chinese meaning and the pronunciation of the word.
+prompt_word_manually_system = """You are a translation assistant, I will give you a \
+paragraph of english and a word in the paragraph. Reply the word, the normal form, \
+the simplified Chinese meaning and the pronunciation of the word."""  # noqa: E501
 
-Your answer should be separated into 4 different lines, each line's content is as below:
-
-word: {{word}}
-normal_form: {{normal_form_of_word}}
-pronunciation: {{pronunciation}}
-meaning: {{chinese_meaning_of_word}}
-
-The answer should contains no extra content.
-"""  # noqa: E501
 
 prompt_word_manually_user_tmpl = """\
 The paragraph is:
@@ -183,7 +160,9 @@ The paragraph is:
 The word is: {word}"""
 
 
-def query_get_word_choices(text: str, known_words: Set[str], limit: Optional[int] = 3) -> str:
+async def query_get_word_choices(
+    text: str, known_words: Set[str], limit: Optional[int] = 3
+) -> str:
     """Query OpenAI to get the translation results.
 
     :param limit: The maximum number of words to return, default to 3
@@ -192,36 +171,22 @@ def query_get_word_choices(text: str, known_words: Set[str], limit: Optional[int
     user_content = prompt_word_choices_user_tmpl.format(
         text=text, known_words=','.join(known_words)
     )
-    completion = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": prompt_word_choices_system.format(limit=limit)},
-            {"role": "user", "content": user_content},
-            # Use a single "user" message at this moment because "system" role doesn't perform better
-            # {"role": "user", "content": prompt_word_choices_system + '\n' + user_content},
-        ],
-    )
-    logger.debug('Completion API returns: %s', completion)
-    return completion.choices[0].message.content.strip()
+    prompt = prompt_word_choices_system.format(limit=limit) + '\n' + user_content
+    agent = Agent(create_ai_model(), result_type=List[WordChoiceModelResp])
+    result = await agent.run(prompt)
+    return result.data
 
 
-def query_get_word_manually(text: str, word: str) -> str:
+async def query_get_word_manually(text: str, word: str) -> WordChoice:
     """Query OpenAI to get the meaning of manually selected word.
 
     :return: Well formatted string contains word and meaning.
     """
     user_content = prompt_word_manually_user_tmpl.format(text=text, word=word)
-    completion = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": prompt_word_manually_system},
-            {"role": "user", "content": user_content},
-            # Use a single "user" message at this moment because "system" role doesn't perform better
-            # {"role": "user", "content": prompt_word_choices_system + '\n' + user_content},
-        ],
-    )
-    logger.debug('Completion API returns: %s', completion)
-    return completion.choices[0].message.content.strip()
+    prompt = prompt_word_manually_system + user_content
+    agent = Agent(create_ai_model(), result_type=WordChoiceModelResp)
+    result = await agent.run(prompt)
+    return result.data
 
 
 def parse_word_choices_reply(reply_text: str) -> List[WordChoice]:
@@ -349,3 +314,31 @@ def query_story(words: List[str], stream_handler: Optional[StreamHandler] = None
                 stream_handler(delta_content)
             content += delta_content
     return content
+
+
+def create_ai_model():
+    """Create the model object for interacting with LLM service.
+
+    :raise ValueError: when the system settings is invalid .
+    """
+    settings = get_internal_state_store().get_system_settings()
+    if not settings:
+        raise ValueError('System settings not found')
+
+    if settings.model_provider == 'openai':
+        openai_config = settings.openai_config
+        client = AsyncOpenAI(
+            api_key=openai_config.api_key, base_url=openai_config.api_host or None
+        )
+        return OpenAIModel(openai_config.model, openai_client=client)
+    elif settings.model_provider == 'gemini':
+        gemini_config = settings.gemini_config
+        if gemini_config.api_host:
+            extra_kwargs = {
+                "url_template": str(gemini_config.api_host).rstrip('/') + '/v1beta/models/{model}:'
+            }
+        else:
+            extra_kwargs = {}
+        return GeminiModel(gemini_config.model, api_key=gemini_config.api_key, **extra_kwargs)  # type: ignore
+    else:
+        raise ValueError('Unknown model provider')

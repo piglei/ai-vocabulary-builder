@@ -323,7 +323,7 @@ const tokenizedText = computed(() => {
   let items = tokens.map(token => {
     let item = {"token": token, "addedToVoc": false}
     // When the word has been added to the vocabulary, mark it
-    if (token.type === 'word' && token.value === wordSample.value.word) {
+    if (token.type === 'word' && token.value.toLowerCase() === wordSample.value.word.toLowerCase()) {
       item.addedToVoc = true
       return item
     }

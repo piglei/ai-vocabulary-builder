@@ -7,7 +7,7 @@ from pathlib import Path
 from tinydb import Query
 
 from voc_builder import config
-from voc_builder.models import WordProgress, WordSample
+from voc_builder.models import GeminiConfig, OpenAIConfig, SystemSettings, WordProgress, WordSample
 from voc_builder.store import InternalStateStore, MasteredWordStore, WordStore
 
 
@@ -142,6 +142,20 @@ class TestInternalStateStore:
         state_store.set_last_ver_checking_ts()
         new_ts = state_store.get_last_ver_checking_ts()
         assert new_ts and new_ts > ts
+
+    def test_system_settings(self, tmp_path):
+        state_store = InternalStateStore(tmp_path / 'foo.json')
+        assert state_store.get_system_settings() is None
+
+        settings = SystemSettings(
+            model_provider='openai',
+            openai_config=OpenAIConfig(api_key='test_key', api_host='test_host', model='gtp-4o'),
+            gemini_config=GeminiConfig(api_key='', api_host='', model=''),
+        )
+        state_store.set_system_settings(settings)
+        saved_settings = state_store.get_system_settings()
+
+        assert saved_settings == settings
 
 
 class TestStoreDir:

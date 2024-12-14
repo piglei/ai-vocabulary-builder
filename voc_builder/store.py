@@ -7,11 +7,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set
 
+import cattrs
 import pendulum
 from tinydb import Query, TinyDB
 
 from voc_builder import config
-from voc_builder.models import WordProgress, WordSample
+from voc_builder.models import SystemSettings, WordProgress, WordSample
 
 
 class MasteredWordStore:
@@ -271,6 +272,27 @@ class InternalStateStore:
         if not objs:
             return None
         return InternalState(**objs[0]).last_ver_checking_ts
+
+    def set_system_settings(self, settings: SystemSettings):
+        """Set the system settings."""
+        State = Query()
+        return self._db.upsert(
+            {
+                'name': self.name_default,
+                'system_settings': cattrs.unstructure(settings),
+            },
+            State.name == self.name_default,
+        )
+
+    def get_system_settings(self) -> Optional[SystemSettings]:
+        """Get the system preferences."""
+        State = Query()
+        objs = self._db.search(State.name == self.name_default)
+        if not objs:
+            return None
+
+        d = objs[0].get('system_settings', {})
+        return cattrs.structure(d, SystemSettings)
 
 
 # Database related functions
