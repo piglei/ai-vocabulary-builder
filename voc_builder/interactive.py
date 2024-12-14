@@ -1,4 +1,5 @@
 """Functions relative with the interactive REPL"""
+
 import logging
 import time
 import traceback
@@ -35,19 +36,19 @@ console = Console()
 
 # Special commands
 # no: discard last added word, try to get other options and let user choose from them manually
-COMMAND_NO = 'no'
+COMMAND_NO = "no"
 # story: make a stroy from least recent used words
-COMMAND_STORY = 'story'
+COMMAND_STORY = "story"
 # remove: enter interactive mode to remove words from vocabulary book
-COMMAND_REMOVE = 'remove'
+COMMAND_REMOVE = "remove"
 
 
 class LastActionResult:
     """This class is used as a global state, stores the result of last action"""
 
-    trans_result: ClassVar[Optional['TransActionResult']] = None
-    story_result: ClassVar[Optional['StoryActionResult']] = None
-    list_result: ClassVar[Optional['ListActionResult']] = None
+    trans_result: ClassVar[Optional["TransActionResult"]] = None
+    story_result: ClassVar[Optional["StoryActionResult"]] = None
+    list_result: ClassVar[Optional["ListActionResult"]] = None
 
 
 @dataclass
@@ -63,7 +64,7 @@ class TransActionResult:
 
     input_text: str
     stored_to_voc_book: bool
-    error: str = ''
+    error: str = ""
     word_sample: Optional[WordSample] = None
     invalid_for_adding: bool = False
 
@@ -81,7 +82,7 @@ class NoActionResult:
     words: List[WordSample] = field(default_factory=list)
     failed_words: List[WordSample] = field(default_factory=list)
     stored_to_voc_book: bool = False
-    error: str = ''
+    error: str = ""
 
 
 @dataclass
@@ -93,7 +94,7 @@ class StoryActionResult:
     """
 
     words: List[WordSample] = field(default_factory=list)
-    error: str = ''
+    error: str = ""
 
 
 @dataclass
@@ -104,7 +105,7 @@ class ListActionResult:
     """
 
     words: List[WordSample] = field(default_factory=list)
-    error: str = ''
+    error: str = ""
 
 
 prompt_style = Style.from_dict(
@@ -123,20 +124,20 @@ def enter_interactive_mode():  # noqa: C901
     try:
         migrate_builder_data_to_store(console)
     except Exception as e:
-        logger.debug('Detailed stack trace info: %s', traceback.format_exc())
-        console.print(f'Error migrating data from CSV file: {e}')
+        logger.debug("Detailed stack trace info: %s", traceback.format_exc())
+        console.print(f"Error migrating data from CSV file: {e}")
 
     # Check form new versions
     try:
         check_for_new_versions(console)
     except Exception as e:
-        logger.debug('Detailed stack trace info: %s', traceback.format_exc())
-        logger.warn(f'Error checking for new versions: {e}')
+        logger.debug("Detailed stack trace info: %s", traceback.format_exc())
+        logger.warning(f"Error checking for new versions: {e}")
 
     console.print(
         Panel(
             dedent(
-                '''
+                """
     [bold]Guides[/bold]:
     - Enter your text to start translating and building vocabulary
     - One sentence at a time, don't paste huge amounts of text at once
@@ -147,25 +148,23 @@ def enter_interactive_mode():  # noqa: C901
         * [bold]list {limit}[/bold]: List recently added words. Args:
           - [underline]limit[/underline]: optional, a number or "all", defaults to 10.
         * [bold]remove[/bold]: Enter "remove" mode, remove words from your vocabulary book.
-        * [Ctrl+c] to quit'''
+        * [Ctrl+c] to quit"""
             ).strip(),
-            title='Welcome to AI Vocabulary Builder!',
+            title="Welcome to AI Vocabulary Builder!",
         )
     )
     session: PromptSession = PromptSession()
     while True:
-        text = session.prompt(
-            HTML('<tip>Enter text</tip><arrow>&gt;</arrow> '), style=prompt_style
-        ).strip()
+        text = session.prompt(HTML("<tip>Enter text</tip><arrow>&gt;</arrow> "), style=prompt_style).strip()
         if not text:
             continue
-        elif text == COMMAND_NO:
+        if text == COMMAND_NO:
             handle_cmd_no()
             continue
-        elif text == COMMAND_STORY:
+        if text == COMMAND_STORY:
             LastActionResult.story_result = handle_cmd_story()
             continue
-        elif text == COMMAND_REMOVE:
+        if text == COMMAND_REMOVE:
             handle_cmd_remove()
             continue
 
@@ -177,7 +176,7 @@ def enter_interactive_mode():  # noqa: C901
             # Handle as a normal translation
             pass
         except CommandSyntaxError as e:
-            console.print(f'List command syntax error: {e}', style='red')
+            console.print(f"List command syntax error: {e}", style="red")
             continue
         else:
             LastActionResult.list_result = handle_cmd_list(list_expr)
@@ -185,7 +184,7 @@ def enter_interactive_mode():  # noqa: C901
 
         trans_ret = handle_cmd_trans(text.strip())
         # Don't store error of input invalid type
-        if trans_ret.error != 'input_length_invalid':
+        if trans_ret.error != "input_length_invalid":
             LastActionResult.trans_result = trans_ret
 
 
@@ -201,20 +200,16 @@ def handle_cmd_trans(text: str) -> TransActionResult:
     # Validate input length
     if len(text) < MIN_LENGTH_TRANS_TEXT:
         console.print(
-            f'Content too short, input at least {MIN_LENGTH_TRANS_TEXT} characters to start a translation.',
-            style='red',
+            f"Content too short, input at least {MIN_LENGTH_TRANS_TEXT} characters to start a translation.",
+            style="red",
         )
-        return TransActionResult(
-            input_text=text, stored_to_voc_book=False, error='input_length_invalid'
-        )
+        return TransActionResult(input_text=text, stored_to_voc_book=False, error="input_length_invalid")
     if len(text) > MAX_LENGTH_TRANS_TEXT:
         console.print(
-            f'Content too long, input at most {MAX_LENGTH_TRANS_TEXT} characters to start a translation.',
-            style='red',
+            f"Content too long, input at most {MAX_LENGTH_TRANS_TEXT} characters to start a translation.",
+            style="red",
         )
-        return TransActionResult(
-            input_text=text, stored_to_voc_book=False, error='input_length_invalid'
-        )
+        return TransActionResult(input_text=text, stored_to_voc_book=False, error="input_length_invalid")
 
     mastered_word_s = get_mastered_word_store()
     word_store = get_word_store()
@@ -228,17 +223,15 @@ def handle_cmd_trans(text: str) -> TransActionResult:
             trans_ret = get_translation(text, live_renderer.live_info)
             live_renderer.block_until_finished()
         except OpenAIServiceError as e:
-            console.print(f'[red] Error processing text, detail: {e}[red]')
-            logger.debug('Detailed stack trace info: %s', traceback.format_exc())
-            return TransActionResult(
-                input_text=text, stored_to_voc_book=False, error='openai_svc_error'
-            )
+            console.print(f"[red] Error processing text, detail: {e}[red]")
+            logger.debug("Detailed stack trace info: %s", traceback.format_exc())
+            return TransActionResult(input_text=text, stored_to_voc_book=False, error="openai_svc_error")
         live.update(gen_translated_table(text, trans_ret.translated_text))
 
     # Words already in vocabulary book and marked as mastered are treated as "known"
     known_words = word_store.filter(orig_words) | mastered_word_s.filter(orig_words)
 
-    console.print('\n')
+    console.print("\n")
     progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Extracting word"))
     with progress:
         task_id = progress.add_task("get", start=False)
@@ -246,11 +239,9 @@ def handle_cmd_trans(text: str) -> TransActionResult:
         try:
             choice = get_uncommon_word(text, known_words)
         except OpenAIServiceError as e:
-            console.print(f'[red] Error extracting word, detail: {e}[red]')
-            logger.debug('Detailed stack trace info: %s', traceback.format_exc())
-            return TransActionResult(
-                input_text=text, stored_to_voc_book=False, error='openai_svc_error'
-            )
+            console.print(f"[red] Error extracting word, detail: {e}[red]")
+            logger.debug("Detailed stack trace info: %s", traceback.format_exc())
+            return TransActionResult(input_text=text, stored_to_voc_book=False, error="openai_svc_error")
         finally:
             progress.update(task_id, total=1, advance=1)
 
@@ -268,7 +259,7 @@ def handle_cmd_trans(text: str) -> TransActionResult:
     try:
         validate_result_word(word, text)
     except WordInvalidForAdding as e:
-        console.print(f'Unable to add "{word.word}", reason: {e}', style='red')
+        console.print(f'Unable to add "{word.word}", reason: {e}', style="red")
         return TransActionResult(
             input_text=text,
             stored_to_voc_book=False,
@@ -282,11 +273,11 @@ def handle_cmd_trans(text: str) -> TransActionResult:
     console.print(
         (
             f'[bold]"{word.word}"[/bold] was added to your vocabulary book ([bold]{word_store.count()}[/bold] '
-            'in total), well done!'
+            "in total), well done!"
         ),
-        style='grey42',
+        style="grey42",
     )
-    console.print('Hint: use "no" command to choose other words.\n', style='grey42')
+    console.print('Hint: use "no" command to choose other words.\n', style="grey42")
     return TransActionResult(input_text=text, stored_to_voc_book=True, word_sample=word)
 
 
@@ -299,7 +290,7 @@ class LiveTransRenderer:
     frames_per_second = 12
 
     def __init__(self, live_display: Live) -> None:
-        self.spinner = Spinner('dots')
+        self.spinner = Spinner("dots")
         self.live_display = live_display
         self.live_info = LiveTranslationInfo()
         self._thread = None
@@ -332,9 +323,9 @@ class LiveTransRenderer:
         """
         table = Table(title="Translation Result", show_header=False)
         table.add_column("Title")
-        table.add_column("Detail", overflow='fold')
-        table.add_row("[bold]Original Text[/bold]", f'[grey42]{text}[grey42]')
-        table.add_row(Text('Translating ') + self.spinner.render(time.time()), translated)
+        table.add_column("Detail", overflow="fold")
+        table.add_row("[bold]Original Text[/bold]", f"[grey42]{text}[grey42]")
+        table.add_row(Text("Translating ") + self.spinner.render(time.time()), translated)
         return table
 
 
@@ -347,8 +338,8 @@ def gen_translated_table(text: str, translated: str):
     """
     table = Table(title="Translation Result", show_header=False)
     table.add_column("Title")
-    table.add_column("Detail", overflow='fold')
-    table.add_row("[bold]Original Text[/bold]", f'[grey42]{text}[grey42]')
+    table.add_column("Detail", overflow="fold")
+    table.add_row("[bold]Original Text[/bold]", f"[grey42]{text}[grey42]")
     table.add_row("[bold]Translation[/bold]", translated)
     return table
 
@@ -363,18 +354,16 @@ def handle_cmd_no() -> NoActionResult:
     """
     ret = LastActionResult.trans_result
     if not (ret and ret.word_sample and (ret.stored_to_voc_book or ret.invalid_for_adding)):
-        console.print(
-            'The "no" command was used to remove the last added word and select the word manually.'
-        )
-        console.print('Can\'t get the last added word, please start a new translation first.')
-        return NoActionResult(error='last_trans_absent')
+        console.print('The "no" command was used to remove the last added word and select the word manually.')
+        console.print("Can't get the last added word, please start a new translation first.")
+        return NoActionResult(error="last_trans_absent")
 
     selector = ManuallySelector()
     if not ret.invalid_for_adding:
         selector.discard_word(ret.word_sample)
         console.print(
             f'"{ret.word_sample.word}" has been discarded from your vocabulary book.',
-            style='grey42',
+            style="grey42",
         )
 
     progress = Progress(SpinnerColumn(), TextColumn("[bold blue] Extracting multiple new words"))
@@ -383,20 +372,20 @@ def handle_cmd_no() -> NoActionResult:
         try:
             choices = selector.get_choices(ret.input_text)
         except OpenAIServiceError as e:
-            console.print(f'[red] Error processing text, detail: {e}[red]')
-            logger.debug('Detailed stack trace info: %s', traceback.format_exc())
-            return NoActionResult(error='openai_svc_error')
+            console.print(f"[red] Error processing text, detail: {e}[red]")
+            logger.debug("Detailed stack trace info: %s", traceback.format_exc())
+            return NoActionResult(error="openai_svc_error")
         finally:
             progress.update(task_id, total=1, advance=1)
 
     if not choices:
-        console.print('No words could be extracted from your input text, skip.', style='grey42')
-        return NoActionResult(error='no_choices_error')
+        console.print("No words could be extracted from your input text, skip.", style="grey42")
+        return NoActionResult(error="no_choices_error")
 
     choices_from_user = selector.get_user_words_selection(choices)
     if not choices_from_user:
-        console.print('Skipped.', style='grey42')
-        return NoActionResult(error='user_skip')
+        console.print("Skipped.", style="grey42")
+        return NoActionResult(error="user_skip")
 
     # Process the words, try to add them to the vocabulary book and print the result
     words: List[WordSample] = []
@@ -413,13 +402,13 @@ def handle_cmd_no() -> NoActionResult:
         try:
             validate_result_word(sample, ret.input_text)
         except WordInvalidForAdding as e:
-            console.print(f'Unable to add "{word_sample.word}", reason: {e}', style='grey42')
+            console.print(f'Unable to add "{word_sample.word}", reason: {e}', style="grey42")
             failed_words.append(sample)
         else:
             words.append(sample)
 
     if not words:
-        return NoActionResult(failed_words=failed_words, error='failed_to_add')
+        return NoActionResult(failed_words=failed_words, error="failed_to_add")
 
     word_store = get_word_store()
     for word in words:
@@ -427,9 +416,9 @@ def handle_cmd_no() -> NoActionResult:
     console.print(
         (
             'New word(s) added to your vocabulary book: [bold]"{}"[/bold] ([bold]{}[/bold] '
-            'in total), well done!\n'.format(','.join(w.word for w in words), word_store.count())
+            "in total), well done!\n".format(",".join(w.word for w in words), word_store.count())
         ),
-        style='grey42',
+        style="grey42",
     )
     LastActionResult.trans_result = None
     return NoActionResult(words=words, failed_words=failed_words, stored_to_voc_book=True)
@@ -438,7 +427,7 @@ def handle_cmd_no() -> NoActionResult:
 class ManuallySelector:
     """A class dealing with manually word selection"""
 
-    choice_skip = 'None of above, skip for now.'
+    choice_skip = "None of above, skip for now."
 
     def discard_word(self, word: WordSample):
         """Remove the last action word for prepare for the next action"""
@@ -449,9 +438,7 @@ class ManuallySelector:
         """Get word choices from OpenAI service"""
         orig_words = tokenize_text(text)
         # Words already in vocabulary book and marked as mastered are treated as "known"
-        known_words = get_word_store().filter(orig_words) | get_mastered_word_store().filter(
-            orig_words
-        )
+        known_words = get_word_store().filter(orig_words) | get_mastered_word_store().filter(orig_words)
         return get_word_choices(text, known_words)
 
     def get_user_words_selection(self, choices: List[WordChoice]) -> List[WordChoice]:
@@ -496,28 +483,28 @@ def handle_cmd_story(words_cnt: int = DEFAULT_WORDS_CNT_FOR_STORY) -> StoryActio
     if len(words) < words_cnt:
         console.print(
             (
-                'Current number of words in your vocabulary book is less than {}.\n'
-                'Translate more and come back later!'
+                "Current number of words in your vocabulary book is less than {}.\n"
+                "Translate more and come back later!"
             ).format(words_cnt),
-            style='red',
+            style="red",
         )
-        return StoryActionResult(error='not_enough_words')
+        return StoryActionResult(error="not_enough_words")
 
     # Call OpenAI service to get story text, word's normal form is preferred
     words_str = [w.get_normal_word_display() or w.word for w in words]
-    console.print('Words for generating story: [bold]{}[/bold]'.format(', '.join(words_str)))
+    console.print("Words for generating story: [bold]{}[/bold]".format(", ".join(words_str)))
     with Live(refresh_per_second=LiveStoryRenderer.frames_per_second) as live:
         live_renderer = LiveStoryRenderer(live)
         live_renderer.run()
         try:
             story_text = get_story(words, live_renderer.live_info)
         except OpenAIServiceError as e:
-            console.print(f'[red] Error retrieving story, detail: {e}[red]')
-            logger.debug('Detailed stack trace info: %s', traceback.format_exc())
-            return StoryActionResult(error='openai_svc_error')
+            console.print(f"[red] Error retrieving story, detail: {e}[red]")
+            logger.debug("Detailed stack trace info: %s", traceback.format_exc())
+            return StoryActionResult(error="openai_svc_error")
 
         live_renderer.block_until_finished()
-        live.update(Panel(highlight_story_text(story_text.strip()), title='Enjoy your reading'))
+        live.update(Panel(highlight_story_text(story_text.strip()), title="Enjoy your reading"))
 
     # Update words to make LRU work
     word_store.update_story_words(words)
@@ -544,8 +531,8 @@ def handle_cmd_list(expr: ListCommandExpr) -> ListActionResult:
 
     # Checking if the user has any words in the vocabulary book
     if word_store.count() == 0:
-        console.print('No words in your vocabulary book, translate more and come back later!\n')
-        return ListActionResult(error='no_words')
+        console.print("No words in your vocabulary book, translate more and come back later!\n")
+        return ListActionResult(error="no_words")
 
     if expr.all:
         words = word_store.list_latest()
@@ -566,7 +553,7 @@ class LiveStoryRenderer:
     frames_per_second = 12
 
     def __init__(self, live_display: Live) -> None:
-        self.spinner = Spinner('dots')
+        self.spinner = Spinner("dots")
         self.live_display = live_display
         self._thread = None
         self.live_info = LiveStoryInfo()
@@ -592,7 +579,7 @@ class LiveStoryRenderer:
         """Generate the panel for displaying story."""
         return Panel(
             highlight_story_text(story_text.strip()),
-            title=Text('The AI is writing the story ') + self.spinner.render(time.time()),
+            title=Text("The AI is writing the story ") + self.spinner.render(time.time()),
         )
 
 
@@ -612,30 +599,26 @@ class StoryCmd:
 def validate_result_word(word: WordSample, orig_text: str):
     """Check if a result word is valid before it can be put into vocabulary book"""
     if get_word_store().exists(word.word):
-        raise WordInvalidForAdding('already in your vocabulary book')
+        raise WordInvalidForAdding("already in your vocabulary book")
     if get_mastered_word_store().exists(word.word):
-        raise WordInvalidForAdding('already mastered')
+        raise WordInvalidForAdding("already mastered")
     if word.word not in orig_text.lower():
-        raise WordInvalidForAdding('not in the original text')
+        raise WordInvalidForAdding("not in the original text")
 
 
 def format_words(words: List[WordSample]) -> Table:
     """Format a list of words as a rich table"""
-    table = Table(title='Words Details', show_header=True)
+    table = Table(title="Words Details", show_header=True)
     table.add_column("Word")
     table.add_column("Pronunciation")
-    table.add_column("Definition", overflow='fold', max_width=24)
-    table.add_column("Example sentence / Translation", overflow='fold')
+    table.add_column("Definition", overflow="fold", max_width=24)
+    table.add_column("Example sentence / Translation", overflow="fold")
     for w in words:
         table.add_row(
             w.word,
             w.pronunciation,
             w.get_word_meaning_display(),
-            highlight_words(w.orig_text, [w.word])
-            + '\n'
-            + "[grey42]"
-            + w.translated_text
-            + "[/grey42]",
+            highlight_words(w.orig_text, [w.word]) + "\n" + "[grey42]" + w.translated_text + "[/grey42]",
         )
     return table
 
@@ -648,6 +631,6 @@ def format_single_word(word: WordSample) -> Table:
     table = Table(title="", show_header=True)
     table.add_column("Word")
     table.add_column("Pronunciation")
-    table.add_column("Definition", overflow='fold')
+    table.add_column("Definition", overflow="fold")
     table.add_row(word.word, word.pronunciation, word.get_word_meaning_display())
     return table

@@ -1,4 +1,5 @@
 """Remove words from vocabulary book."""
+
 from itertools import islice
 
 from prompt_toolkit import PromptSession
@@ -23,10 +24,8 @@ class WordCompleter(Completer):
         is used."""
         word = document.get_word_before_cursor()
         for item in islice(get_word_store().search(keyword=word), self.limit):
-            display = HTML(item.ws.word.replace(word, f'<b>{word}</b>'))
-            display_meta = HTML(
-                f'{item.ws.get_word_meaning_display()} | {item.date_added_diff_for_humans}'
-            )
+            display = HTML(item.ws.word.replace(word, f"<b>{word}</b>"))
+            display_meta = HTML(f"{item.ws.get_word_meaning_display()} | {item.date_added_diff_for_humans}")
             yield Completion(
                 item.ws.word,
                 start_position=-len(word),
@@ -48,9 +47,7 @@ def handle_cmd_remove():
 
     def bottom_toolbar():
         """Show some meta info in the bottom toolbar."""
-        return HTML(
-            'Input "q" to quit | Words in total: <b>{}</b>'.format(get_word_store().count())
-        )
+        return HTML('Input "q" to quit | Words in total: <b>{}</b>'.format(get_word_store().count()))
 
     session = PromptSession(completer=WordCompleter())  # type: ignore
     while True:
@@ -60,14 +57,14 @@ def handle_cmd_remove():
             session.app.current_buffer.start_completion()
 
         words = session.prompt(
-            HTML('<tip>Input word to be removed</tip><arrow> -&gt;</arrow> '),
+            HTML("<tip>Input word to be removed</tip><arrow> -&gt;</arrow> "),
             style=prompt_style,
             pre_run=pre_run,
             mouse_support=True,
             bottom_toolbar=bottom_toolbar,
         )
         words = words.strip()
-        if not words or words == 'q':
+        if not words or words == "q":
             return
 
         for w in words.split():
@@ -84,8 +81,8 @@ def remove_word(w: str):
     w_ret = word_store.remove(w)
     m_ret = mword_store.remove(w)
     if w_ret:
-        console.print(f'[bold]"{w}"[/bold] has been removed.', style='blue')
+        console.print(f'[bold]"{w}"[/bold] has been removed.', style="blue")
     elif m_ret:
-        console.print(f'[bold]"{w}"[/bold] has been removed form "mastered words".', style='blue')
+        console.print(f'[bold]"{w}"[/bold] has been removed form "mastered words".', style="blue")
     else:
-        console.print(f'[bold]"{w}"[/bold] not found.', style='red')
+        console.print(f'[bold]"{w}"[/bold] not found.', style="red")

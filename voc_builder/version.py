@@ -1,5 +1,5 @@
-"""Many functions of this module are copied from https://github.com/wimglenn/johnnydep
-"""
+"""Many functions of this module are copied from https://github.com/wimglenn/johnnydep"""
+
 import logging
 import sys
 import time
@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_INDEX = "https://pypi.org/simple/"
 
-PACKAGE_NAME = 'ai-vocabulary-builder'
+PACKAGE_NAME = "ai-vocabulary-builder"
 
 # Perform version checking only after 24 hours have passed since the last action.
 VERSION_CHECKING_INTERVAL = 3600 * 24
@@ -31,7 +31,7 @@ def check_for_new_versions(console: Console):
     state_store = get_internal_state_store()
     last_ver_checking_ts = state_store.get_last_ver_checking_ts()
     if last_ver_checking_ts and time.time() - last_ver_checking_ts < VERSION_CHECKING_INTERVAL:
-        return None
+        return
 
     try:
         current = __version__
@@ -43,11 +43,11 @@ def check_for_new_versions(console: Console):
     if version.parse(current) < version.parse(latest):
         console.print(
             rf'\[notice] A new release of "AI vocabulary builder" is available, {current}(current) -> {latest}(latest)',  # noqa: E501
-            style='chartreuse2',
+            style="chartreuse2",
         )
         console.print(
             r'\[notice] To update, run "pip install --upgrade ai-vocabulary-builder"',
-            style='chartreuse2',
+            style="chartreuse2",
         )
 
 
@@ -116,7 +116,7 @@ def get_versions(dist_name, index_url=None, env=None, extra_index_url=None):
         out = getattr(err, "output", b"")
     else:
         log.warning(out)
-        raise Exception("Unexpected success:" + " ".join(args))
+        raise Exception("Unexpected success:" + " ".join(args))  # noqa: TRY002
     out_str = out.decode("utf-8")
     lines = []
     msg = "Could not find a version that satisfies the requirement"

@@ -22,9 +22,9 @@ class WordSample:
     translated_text: str
 
     @classmethod
-    def make_empty(cls, word: str) -> 'WordSample':
+    def make_empty(cls, word: str) -> "WordSample":
         """Make an empty object which use "word" field only, other fields are set to empty."""
-        return cls(word, word, '', '', '', '')
+        return cls(word, word, "", "", "", "")
 
     def get_word_meaning_display(self) -> str:
         """Get the word_meaning field for display purpose, will add extra info"""
@@ -35,7 +35,7 @@ class WordSample:
     def get_normal_word_display(self) -> str:
         """Try to display current word with the normal form comes first"""
         if self.word_normal and self.word_normal != self.word:
-            return f'{self.word_normal}({self.word})'
+            return f"{self.word_normal}({self.word})"
         return self.word
 
 
@@ -59,7 +59,9 @@ class WordChoice:
         if self.word == self.word_normal:
             return f'{self.word} / {self.pronunciation.strip("/")} / {self.word_meaning}'
         else:
-            return f'{self.word} / （原词：{self.word_normal}） / {self.pronunciation.strip("/")} / {self.word_meaning}'
+            return (
+                f'{self.word} / （原词：{self.word_normal}） / {self.pronunciation.strip("/")} / {self.word_meaning}'
+            )
 
     @classmethod
     def extract_word(cls, s: str) -> str:
@@ -68,7 +70,7 @@ class WordChoice:
         :param s: A detailed representation of WordChoice object
         :return: The word string
         """
-        return s.split(' / ')[0]
+        return s.split(" / ")[0]
 
 
 @dataclass
@@ -109,7 +111,7 @@ class LiveTranslationInfo:
     :param is_finished: Whether the translation is finished
     """
 
-    translated_text: str = ''
+    translated_text: str = ""
     is_finished: bool = False
 
 
@@ -121,7 +123,7 @@ class LiveStoryInfo:
     :param is_finished: Whether the story writing is finished
     """
 
-    story_text: str = ''
+    story_text: str = ""
     is_finished: bool = False
 
 
@@ -155,7 +157,7 @@ class SystemSettings:
 def build_default_settings() -> SystemSettings:
     """Build the default system settings, all fields are using the default value."""
     return SystemSettings(
-        model_provider='',
-        openai_config=OpenAIConfig(api_key='', api_host='', model=''),
-        gemini_config=GeminiConfig(api_key='', api_host='', model=''),
+        model_provider="",
+        openai_config=OpenAIConfig(api_key="", api_host="", model=""),
+        gemini_config=GeminiConfig(api_key="", api_host="", model=""),
     )

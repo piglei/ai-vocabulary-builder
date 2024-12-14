@@ -34,15 +34,10 @@ url = "https://mirrors.tencent.com/pypi/simple/"
 
 [tool.poetry.group.dev.dependencies]
 toml = "^0.10.2"
-pytest = "==7.2.2"
-isort = "^4.0.0"
-black = "==23.1.0"
-flake8 = "^5.0.0"
-flake8-bugbear = "==23.1.20"
-flake8-comprehensions = "==3.10.1"
-flake8-pie = "==0.16.0"
-mypy = "==1.0.0"
-types-setuptools = "^67.6.0.0"
+ruff = "^0.8.3"
+nox = "^2024.10.9"
+pytest = "^8.3.4"
+mypy = "^1.13.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -71,3 +66,116 @@ show_error_codes = true
 check_untyped_defs = true
 namespace_packages = true
 exclude = []
+
+[tool.ruff]
+line-length = 119
+
+# 每个规则集的具体内容请参考：https://docs.astral.sh/ruff/rules/
+select = [
+  "E",
+  "F",
+  "W",
+  "C90",
+  "B",
+  "PIE",
+  "C4",
+  "PL",
+  "RET",
+  "N",
+  "PERF",
+  "G",
+  "TRY",
+  "SIM",
+  "PT",
+  "LOG",
+]
+
+# 理论上来说，ignore 规则列表中的条目越少越好。但在实际项目中，选择性地忽略某些规则常常是必须的。
+# 下面收集了常见的待忽略规则集，并将其分为两类：“推荐忽略”和“谨慎忽略”。“推荐忽略”类中所包含的规
+# 则，所有项目建议默认启用。“谨慎忽略”类中的规则，项目可酌情添加。
+# 
+# 除此处列出的规则以外，不建议随意扩充忽略规则列表。
+ignore = [
+  # === 推荐忽略 ===
+  # pyflakes: 忽略后，允许使用 import *，仅在个别情况下搭配 __all__ 使用
+  "F403",
+  "F405",
+  # pycodestyle: 忽略后，不检查行长，最大的每行长度直接由 ruff formatter 来保证
+  "E501",
+  # pycodestyle: 忽略后，不再对多行字符串的版权头信息报错， 假如将其批量调整成普通 # 号注释后可解
+  "E402",
+  # flake8-comprehensions: 忽略后，允许使用 dict() 函数来构建字典对象
+  "C408",
+  # flake8-bugbear: 忽略后，允许对字面量属性名使用 getattr/setattr 函数
+  "B009",
+  "B010",
+  # flake8-bugbear: 忽略后，允许在 except 语句块中使用裸的 raise 语句，不要求必须使用 raise ... from
+  "B904",
+  # pylint：忽略后，允许定义超过 5 个参数的函数
+  "PLR0913",
+  # pylint：忽略后，允许直接和 magic value 字面量做比较，因为并非所有情况都适合抽象常量
+  "PLR2004",
+  # flake8-return: 忽略后，允许在 return 前定义一个临时变量，这有时对可读性有帮助
+  "RET504",
+  # flake8-return: 忽略后，允许使用非必须的分支包裹 return/raise 语句，这有时对可读性有帮助
+  "RET505",
+  "RET506",
+  # pep8-naming: 忽略后，不强制 class 内的变量使用蛇形命名，因为部分情况下驼峰命名更契合上下文
+  "N815",
+  # pep8-naming: 忽略后，允许使用短名字作为导入时的别名
+  "N817",
+  # pep8-naming: 忽略后，不强制要求异常类的名字必须以 Error 结尾
+  "N818",
+  # perflint: 忽略后，不强制要求一定用推导式替代 for 循环，因为有时循环的可读性更好 
+  "PERF401",
+  # perflint: 忽略后，允许在循环中使用 try except 代码块，因为这对性能影响微乎其微，有时可读性更好
+  "PERF203",
+  # tryceratops: 忽略后，允许抛出异常时，使用较长的字符串作为异常信息，可能会降低异常的可使用性
+  "TRY003",
+  # tryceratops: 忽略后，允许在 except 语句块中使用裸的 raise 语句，不要求必须使用 raise ... from
+  "TRY200",
+  # flake8-simplify: 忽略后，允许使用 exception: pass 语句，不要求必须用 contextlib.suppress 替换
+  "SIM105",
+  # flake8-simplify: 忽略后，不强制要求用三元表达式替换普通的短 if-else 语句
+  "SIM108",
+  # flake8-pytest-style：忽略后，允许 fixture 显式指定 scope="function"
+  "PT003",
+  # flake8-pytest-style：忽略后，不再关注 @pytest.fixture 无参数时是否需要加括号
+  "PT001",
+
+
+  # === 谨慎忽略 ===
+  # pep8-naming: 忽略后，不强制 class 必须使用驼峰命名，部分单元测试代码中用下划线起名可能更方便
+  "N801",
+  # flake8-logging-format: 忽略后，允许在打印日志时使用 .format() 方法，可能降低性能
+  "G001",
+  # flake8-logging-format: 忽略后，允许在打印日志时使用 f-string 表达式，更可读但可能降低性能
+  "G004",
+  # pylint: 忽略后，允许使用 global 关键字修改全局变量
+  "PLW0603",
+  "N806",
+  "SIM300",
+]
+
+# 添加需要额外忽略的目录，比如 Django 自动生成的 migrations 目录
+extend-exclude = []
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.isort]
+# 总是显式制定 import section 的顺序
+section-order = [
+  "future",
+  "standard-library",
+  "third-party",
+  "first-party",
+  "local-folder",
+]
+relative-imports-order = "closest-to-furthest"
+# 添加那些不能被默认识别的 first party 的模块名
+known-first-party = ["voc_builder", "tests"]
+
+[tool.ruff.lint.mccabe]
+# 调大所允许的最大圈复杂度
+max-complexity = 12

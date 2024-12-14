@@ -37,7 +37,7 @@ class MasteredWordStore:
 
         :return: List of words.
         """
-        return [d['word'] for d in self._db.all()]
+        return [d["word"] for d in self._db.all()]
 
     def add(self, word: str):
         """Mark a word as mastered
@@ -45,7 +45,7 @@ class MasteredWordStore:
         :param word: Lower cased word.
         """
         MWord = Query()
-        return self._db.upsert({'word': word}, MWord.word == word)
+        return self._db.upsert({"word": word}, MWord.word == word)
 
     def remove(self, word: str):
         """Remove a word
@@ -80,7 +80,7 @@ class WordDetailedObj:
     @property
     def date_added(self) -> str:
         """Return a well formatted date added string for display"""
-        return datetime.datetime.fromtimestamp(self.ts_date_added).strftime('%Y-%m-%d %H:%M')
+        return datetime.datetime.fromtimestamp(self.ts_date_added).strftime("%Y-%m-%d %H:%M")
 
     @property
     def date_added_diff_for_humans(self) -> str:
@@ -104,9 +104,7 @@ class WordStore:
         :param count: How many words to pick
         :return: A list of words
         """
-        all_words = sorted(
-            self.all(), key=lambda obj: (obj.wp.ts_date_storied or 0, obj.ts_date_added or 0)
-        )
+        all_words = sorted(self.all(), key=lambda obj: (obj.wp.ts_date_storied or 0, obj.ts_date_added or 0))
         # Randomize the result by picking from a slightly lager range
         results = all_words[: math.ceil(1.5 * count)]
         random.shuffle(results)
@@ -127,7 +125,7 @@ class WordStore:
             wp.storied_cnt += 1
             wp.ts_date_storied = time.time()
             self._db.update(
-                {'wp': asdict(wp)},
+                {"wp": asdict(wp)},
                 Word.ws.word == obj.ws.word,
             )
 
@@ -158,9 +156,9 @@ class WordStore:
         Word = Query()
         return self._db.upsert(
             {
-                'ws': asdict(word),
-                'wp': asdict(WordProgress(word=word.word)),
-                'ts_date_added': ts_date_added if ts_date_added is not None else time.time(),
+                "ws": asdict(word),
+                "wp": asdict(WordProgress(word=word.word)),
+                "ts_date_added": ts_date_added if ts_date_added is not None else time.time(),
             },
             Word.ws.word == word.word,
         )
@@ -189,7 +187,7 @@ class WordStore:
         for d in self._db.all():
             yield self._to_detailed_obj(d)
 
-    def search(self, keyword: str, order_by: str = 'date_added') -> Iterable[WordDetailedObj]:
+    def search(self, keyword: str, order_by: str = "date_added") -> Iterable[WordDetailedObj]:
         """Search for words by keyword
 
         :param keyword: The search keyword, part of a word.
@@ -222,11 +220,11 @@ class WordStore:
     def _to_detailed_obj(d: Dict) -> WordDetailedObj:
         """Turn raw JSON data into WordDetailedObj object."""
         # Handle data <= 0.2.0 version
-        d['ws'].setdefault('word_normal', None)
+        d["ws"].setdefault("word_normal", None)
         return WordDetailedObj(
-            ws=WordSample(**d['ws']),
-            wp=WordProgress(**d['wp']),
-            ts_date_added=d['ts_date_added'],
+            ws=WordSample(**d["ws"]),
+            wp=WordProgress(**d["wp"]),
+            ts_date_added=d["ts_date_added"],
         )
 
 
@@ -248,7 +246,7 @@ class InternalStateStore:
     :param file_path: The file path which stores data.
     """
 
-    name_default = 'default'
+    name_default = "default"
 
     def __init__(self, file_path: Path):
         self.file_path = file_path
@@ -259,8 +257,8 @@ class InternalStateStore:
         State = Query()
         return self._db.upsert(
             {
-                'name': self.name_default,
-                'last_ver_checking_ts': time.time(),
+                "name": self.name_default,
+                "last_ver_checking_ts": time.time(),
             },
             State.name == self.name_default,
         )
@@ -278,8 +276,8 @@ class InternalStateStore:
         State = Query()
         return self._db.upsert(
             {
-                'name': self.name_default,
-                'system_settings': cattrs.unstructure(settings),
+                "name": self.name_default,
+                "system_settings": cattrs.unstructure(settings),
             },
             State.name == self.name_default,
         )
@@ -291,7 +289,7 @@ class InternalStateStore:
         if not objs:
             return None
 
-        d = objs[0].get('system_settings', {})
+        d = objs[0].get("system_settings", {})
         return cattrs.structure(d, SystemSettings)
 
 
@@ -310,16 +308,16 @@ def initialized_db():
 def get_mastered_word_store() -> MasteredWordStore:
     if not _db_initialized:
         initialized_db()
-    return MasteredWordStore(config.DEFAULT_DB_PATH / 'mastered_word.json')
+    return MasteredWordStore(config.DEFAULT_DB_PATH / "mastered_word.json")
 
 
 def get_word_store() -> WordStore:
     if not _db_initialized:
         initialized_db()
-    return WordStore(config.DEFAULT_DB_PATH / 'word.json')
+    return WordStore(config.DEFAULT_DB_PATH / "word.json")
 
 
 def get_internal_state_store() -> InternalStateStore:
     if not _db_initialized:
         initialized_db()
-    return InternalStateStore(config.DEFAULT_DB_PATH / 'internal.json')
+    return InternalStateStore(config.DEFAULT_DB_PATH / "internal.json")

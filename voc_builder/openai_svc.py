@@ -53,7 +53,7 @@ async def get_translation(text: str, live_info: LiveTranslationInfo) -> Translat
     try:
         reply = await query_translation(text, stream_handler=handle_stream_content)
     except Exception as e:
-        raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
+        raise OpenAIServiceError("Error querying OpenAI API: %s" % e)
     finally:
         # Mark current info object as finished
         live_info.is_finished = True
@@ -84,9 +84,9 @@ async def query_translation(text: str, stream_handler: Optional[StreamHandler] =
     :return: Translated text.
     """
     user_content = prompt_main_user_tmpl.format(text=text)
-    prompt = prompt_main_system + '\n' + user_content
+    prompt = prompt_main_system + "\n" + user_content
     agent = Agent(create_ai_model())
-    message = ''
+    message = ""
     async with agent.run_stream(prompt) as result:
         async for message in result.stream():
             if stream_handler:
@@ -99,9 +99,9 @@ async def get_uncommon_word(text: str, known_words: Set[str]) -> WordChoice:
     try:
         choices = await query_get_word_choices(text, known_words, limit=1)
     except Exception as e:
-        raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
+        raise OpenAIServiceError("Error querying OpenAI API: %s" % e)
     if not choices:
-        raise OpenAIServiceError('reply contains no word')
+        raise OpenAIServiceError("reply contains no word")
     # NOTE: The replay might contains multiple words, but we only return the first one
     # instead of raising an error.
     return WordChoice(**choices[0].dict())
@@ -116,7 +116,7 @@ def get_word_choices(text: str, known_words: Set[str]) -> List[WordChoice]:
     try:
         reply = query_get_word_choices(text, known_words, limit=DEFAULT_NEW_WORDS_LIMIT)
     except Exception as e:
-        raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
+        raise OpenAIServiceError("Error querying OpenAI API: %s" % e)
     try:
         return parse_word_choices_reply(reply)
     except ValueError as e:
@@ -128,7 +128,7 @@ async def get_word_manually(text: str, word: str) -> WordChoice:
     try:
         item = await query_get_word_manually(text, word)
     except Exception as e:
-        raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
+        raise OpenAIServiceError("Error querying OpenAI API: %s" % e)
     return WordChoice(**item.dict())
 
 
@@ -160,18 +160,14 @@ The paragraph is:
 The word is: {word}"""
 
 
-async def query_get_word_choices(
-    text: str, known_words: Set[str], limit: Optional[int] = 3
-) -> str:
+async def query_get_word_choices(text: str, known_words: Set[str], limit: Optional[int] = 3) -> str:
     """Query OpenAI to get the translation results.
 
     :param limit: The maximum number of words to return, default to 3
     :return: Well formatted string contains word and meaning
     """
-    user_content = prompt_word_choices_user_tmpl.format(
-        text=text, known_words=','.join(known_words)
-    )
-    prompt = prompt_word_choices_system.format(limit=limit) + '\n' + user_content
+    user_content = prompt_word_choices_user_tmpl.format(text=text, known_words=",".join(known_words))
+    prompt = prompt_word_choices_system.format(limit=limit) + "\n" + user_content
     agent = Agent(create_ai_model(), result_type=List[WordChoiceModelResp])
     result = await agent.run(prompt)
     return result.data
@@ -211,43 +207,43 @@ class WordChoicesParser:
             try:
                 choices.append(WordChoice(**d))
             except TypeError:
-                raise ValueError(f'Invalid word choice dict: {d}')
+                raise ValueError(f"Invalid word choice dict: {d}")
 
         # The word was surrounded by {} sometimes, remove
         for c in choices:
-            c.word = c.word.strip('{}').lower()
+            c.word = c.word.strip("{}").lower()
         return choices
 
     def _get_choice_fields_list(self, reply_text: str) -> List[Dict[str, str]]:
         """Get a list of word choice fields by parsing the reply text"""
         # Get all of the key value pairs from text first
         raw_items: List[Tuple[str, str]] = []
-        for line in reply_text.split('\n'):
-            if ':' not in line:
+        for line in reply_text.split("\n"):
+            if ":" not in line:
                 continue
 
-            key, value = line.split(':', 1)
-            key = key.strip(' -').lower()
+            key, value = line.split(":", 1)
+            key = key.strip(" -").lower()
             raw_items.append((key, value.strip()))
 
         choices_dicts: List[Dict[str, str]] = []
         current_choice = None
         for key, value in raw_items:
             # The reply may use non-standard keys sometimes
-            if key in ['word', 'unknown-word', 'unknown word']:
+            if key in ["word", "unknown-word", "unknown word"]:
                 # Word has changed, push last word in to result list
                 if current_choice:
                     choices_dicts.append(current_choice)
 
-                current_choice = {'word': value}
+                current_choice = {"word": value}
             if not current_choice:
                 continue
-            if key == 'meaning':
-                current_choice['word_meaning'] = value
-            elif key == 'normal_form':
-                current_choice['word_normal'] = value
-            elif key == 'pronunciation':
-                current_choice['pronunciation'] = value
+            if key == "meaning":
+                current_choice["word_meaning"] = value
+            elif key == "normal_form":
+                current_choice["word_normal"] = value
+            elif key == "pronunciation":
+                current_choice["pronunciation"] = value
 
         # Push the last word in to result list
         if current_choice:
@@ -268,7 +264,7 @@ def get_story(words: List[WordSample], live_info: LiveStoryInfo) -> str:
     :return: The story text
     :raise: OpenAIServiceError
     """
-    _received = ''
+    _received = ""
 
     def handle_stream_content(text: str):
         nonlocal _received
@@ -280,7 +276,7 @@ def get_story(words: List[WordSample], live_info: LiveStoryInfo) -> str:
     try:
         return query_story(str_words, stream_handler=handle_stream_content)
     except Exception as e:
-        raise OpenAIServiceError('Error querying OpenAI API: %s' % e)
+        raise OpenAIServiceError("Error querying OpenAI API: %s" % e)
     finally:
         # Ends the live procedure
         live_info.is_finished = True
@@ -292,10 +288,10 @@ def query_story(words: List[str], stream_handler: Optional[StreamHandler] = None
     :param stream_handler: A callback function to handle partial replies.
     :return: The story text
     """
-    content = ''
+    content = ""
 
     # Try to use the normal form of each word
-    words_str = ','.join(words)
+    words_str = ",".join(words)
     user_content = prompt_write_story_user_tmpl.format(words=words_str)
     completion = openai.ChatCompletion.create(
         model="gpt-4o-mini",
@@ -306,9 +302,9 @@ def query_story(words: List[str], stream_handler: Optional[StreamHandler] = None
         ],
     )
     for part in completion:
-        logger.debug('Completion API returns: %s', part)
+        logger.debug("Completion API returns: %s", part)
         delta = part.choices[0].delta
-        delta_content = delta.get('content')
+        delta_content = delta.get("content")
         if delta_content:
             if stream_handler:
                 stream_handler(delta_content)
@@ -323,22 +319,18 @@ def create_ai_model():
     """
     settings = get_internal_state_store().get_system_settings()
     if not settings:
-        raise ValueError('System settings not found')
+        raise ValueError("System settings not found")
 
-    if settings.model_provider == 'openai':
+    if settings.model_provider == "openai":
         openai_config = settings.openai_config
-        client = AsyncOpenAI(
-            api_key=openai_config.api_key, base_url=openai_config.api_host or None
-        )
+        client = AsyncOpenAI(api_key=openai_config.api_key, base_url=openai_config.api_host or None)
         return OpenAIModel(openai_config.model, openai_client=client)
-    elif settings.model_provider == 'gemini':
+    elif settings.model_provider == "gemini":
         gemini_config = settings.gemini_config
         if gemini_config.api_host:
-            extra_kwargs = {
-                "url_template": str(gemini_config.api_host).rstrip('/') + '/v1beta/models/{model}:'
-            }
+            extra_kwargs = {"url_template": str(gemini_config.api_host).rstrip("/") + "/v1beta/models/{model}:"}
         else:
             extra_kwargs = {}
         return GeminiModel(gemini_config.model, api_key=gemini_config.api_key, **extra_kwargs)  # type: ignore
     else:
-        raise ValueError('Unknown model provider')
+        raise ValueError("Unknown model provider")

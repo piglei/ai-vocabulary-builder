@@ -3,8 +3,8 @@ from voc_builder.builder import VocBuilderCSVFile
 
 class TestVocBuilderCSVFile:
     def test_read_all_with_meta(self, tmp_path):
-        file_path = tmp_path / 'foo.csv'
-        with open(file_path, 'w', encoding='utf-8') as fp:
+        file_path = tmp_path / "foo.csv"
+        with open(file_path, "w", encoding="utf-8") as fp:
             fp.write(
                 """\
 添加时间,单词,读音,释义,例句/翻译

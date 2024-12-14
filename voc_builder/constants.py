@@ -4,17 +4,17 @@ from enum import Enum
 class ModelProvider(Enum):
     """Supported LLM providers."""
 
-    OPENAI = 'openai'
-    GEMINI = 'gemini'
+    OPENAI = "openai"
+    GEMINI = "gemini"
 
 
 # Available Gemini models
 GEMINI_MODELS = [
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-8b',
-    'gemini-1.5-pro',
-    'gemini-1.0-pro',
-    'gemini-2.0-flash-exp',
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+    "gemini-1.5-pro",
+    "gemini-1.0-pro",
+    "gemini-2.0-flash-exp",
 ]
 
 # Available OpenAI models

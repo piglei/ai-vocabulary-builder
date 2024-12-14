@@ -1,4 +1,5 @@
 """Command parsers, mostly interactive commands."""
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -29,7 +30,7 @@ class ListCmdParser:
             CommandSyntaxError if the command syntax is invalid.
         """
         tokens = cmd.strip().split()
-        if not (len(tokens) <= 2 and tokens[0] == 'list'):
+        if not (len(tokens) <= 2 and tokens[0] == "list"):
             raise NotCommandError()
 
         # Pattern: list all, return the command with default arguments
@@ -38,14 +39,14 @@ class ListCmdParser:
 
         str_arg = tokens[1]
         # Pattern: list all
-        if str_arg == 'all':
+        if str_arg == "all":
             return ListCommandExpr(all=True)
 
         # Pattern: list <num>
         try:
             num = int(str_arg)
         except ValueError:
-            raise CommandSyntaxError(f'limit not a number: {str_arg}')
+            raise CommandSyntaxError(f"limit not a number: {str_arg}")
         if num <= 0:
-            raise CommandSyntaxError('the limit number must be positive.')
+            raise CommandSyntaxError("the limit number must be positive.")
         return ListCommandExpr(num=num)

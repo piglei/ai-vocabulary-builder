@@ -11,13 +11,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, ValidationError, conlist
+from pydantic import BaseModel, Field, ValidationError
 from sse_starlette.sse import EventSourceResponse
 from starlette.responses import FileResponse
 from typing_extensions import Annotated
 
 from voc_builder.constants import GEMINI_MODELS, OPENAI_MODELS, ModelProvider
-from voc_builder.exceptions import OpenAIServiceError, WordInvalidForAdding
+from voc_builder.exceptions import WordInvalidForAdding
 from voc_builder.models import (
     GeminiConfig,
     LiveTranslationInfo,
@@ -25,12 +25,7 @@ from voc_builder.models import (
     WordSample,
     build_default_settings,
 )
-from voc_builder.openai_svc import (
-    get_translation,
-    get_uncommon_word,
-    get_word_choices,
-    get_word_manually,
-)
+from voc_builder.openai_svc import get_translation, get_uncommon_word, get_word_manually
 from voc_builder.store import get_internal_state_store, get_mastered_word_store, get_word_store
 from voc_builder.utils import tokenize_text
 
@@ -65,7 +60,7 @@ app.add_middleware(
 @app.get("/")
 @app.get("/manage")
 def index():
-    return FileResponse(str(ROOT_DIR / 'dist/index.html'))
+    return FileResponse(str(ROOT_DIR / "dist/index.html"))
 
 
 @app.get("/api/translations/")
@@ -100,7 +95,7 @@ async def gen_translation_sse(text: str) -> AsyncGenerator[Dict, None]:
         await task_trans
     except Exception as exc:
         logger.exception("Error getting translation.")
-        yield {"event": "error", "data": json.dumps({'message': str(exc)})}
+        yield {"event": "error", "data": json.dumps({"message": str(exc)})}
         return
 
     yield {"event": "translation", "data": json.dumps(asdict(task_trans.result()))}
@@ -146,7 +141,7 @@ async def create_word_sample(trans_obj: TranslatedText, response: Response):
     try:
         validate_result_word(word_sample, trans_obj.orig_text)
     except WordInvalidForAdding as e:
-        logger.exception(f'Unable to add "{word_sample.word}", reason: {e}')
+        logger.exception(f'Unable to add "{word_sample.word}".')
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {"error": "word_invalid", "message": f"the word is invalid: {e}"}
 
@@ -202,7 +197,7 @@ async def manually_save(req: ManuallySaveRequest, response: Response):
     try:
         validate_result_word(word_sample, req.orig_text)
     except WordInvalidForAdding as e:
-        logger.exception(f'Unable to add "{word_sample.word}", reason: {e}')
+        logger.exception(f'Unable to add "{word_sample.word}".')
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {"error": "word_invalid", "message": f"the word is invalid: {e}"}
 
@@ -213,11 +208,11 @@ async def manually_save(req: ManuallySaveRequest, response: Response):
 def validate_result_word(word: WordSample, orig_text: str):
     """Check if a result word is valid before it can be put into vocabulary book"""
     if get_word_store().exists(word.word):
-        raise WordInvalidForAdding('already in your vocabulary book')
+        raise WordInvalidForAdding("already in your vocabulary book")
     if get_mastered_word_store().exists(word.word):
-        raise WordInvalidForAdding('already mastered')
+        raise WordInvalidForAdding("already mastered")
     if word.word not in orig_text.lower():
-        raise WordInvalidForAdding('not in the original text')
+        raise WordInvalidForAdding("not in the original text")
 
 
 @app.get("/api/settings")
@@ -228,8 +223,8 @@ async def get_settings(response: Response):
         settings = build_default_settings()
     return JSONResponse(
         {
-            'settings': cattrs.unstructure(settings),
-            'model_options': {'gemini': GEMINI_MODELS, 'openai': OPENAI_MODELS},
+            "settings": cattrs.unstructure(settings),
+            "model_options": {"gemini": GEMINI_MODELS, "openai": OPENAI_MODELS},
         }
     )
 
@@ -247,10 +242,10 @@ async def save_settings(settings_input: SettingsInput, response: Response):
     # by pydantic models.
     if settings_input.model_provider == ModelProvider.OPENAI.value:
         o_obj = OpenAIConfigInput(**settings_input.openai_config)
-        settings.openai_config = OpenAIConfig(**o_obj.model_dump(mode='json'))
+        settings.openai_config = OpenAIConfig(**o_obj.model_dump(mode="json"))
     elif settings_input.model_provider == ModelProvider.GEMINI.value:
         g_obj = GeminiConfigInput(**settings_input.gemini_config)
-        settings.gemini_config = GeminiConfig(**g_obj.model_dump(mode='json'))
+        settings.gemini_config = GeminiConfig(**g_obj.model_dump(mode="json"))
 
     state_store.set_system_settings(settings)
     return {}

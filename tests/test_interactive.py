@@ -18,61 +18,59 @@ from voc_builder.models import WordChoice, WordSample
 from voc_builder.store import get_mastered_word_store, get_word_store
 
 # Valid OpenAI replies for text translating
-OPENAI_REPLY_TRANS = '你好，世界。'
-OPENAI_REPLY_WORD = 'word: world\nnormal_form: world\npronunciation: wɔːld\nmeaning: 世界'
+OPENAI_REPLY_TRANS = "你好，世界。"
+OPENAI_REPLY_WORD = "word: world\nnormal_form: world\npronunciation: wɔːld\nmeaning: 世界"
 
 
 class TestCmdTrans:
     def test_input_length(self, tmp_path):
         ret = handle_cmd_trans("world")
-        assert ret.error == 'input_length_invalid'
+        assert ret.error == "input_length_invalid"
 
     def test_known_words(self, tmp_path):
         """Check if known words from all sources works"""
-        with mock.patch(
-            'voc_builder.openai_svc.query_translation', side_effect=OpenAIServiceError()
-        ):
+        with mock.patch("voc_builder.openai_svc.query_translation", side_effect=OpenAIServiceError()):
             ret = handle_cmd_trans("foo bar baz!")
             assert ret.stored_to_voc_book is False
-            assert ret.error == 'openai_svc_error'
+            assert ret.error == "openai_svc_error"
 
     def test_openai_svc_error(self, tmp_path):
         """Test when there's an error calling the OpenAI API"""
-        with mock.patch(
-            'voc_builder.openai_svc.query_translation', side_effect=OpenAIServiceError()
-        ):
+        with mock.patch("voc_builder.openai_svc.query_translation", side_effect=OpenAIServiceError()):
             ret = handle_cmd_trans("world foo bar baz!")
-            assert ret.error == 'openai_svc_error'
+            assert ret.error == "openai_svc_error"
 
     def test_normal(self, tmp_path):
         """Check if known words from all sources works"""
         # Update known words from both sources
-        get_word_store().add(WordSample.make_empty('foo'))
-        get_mastered_word_store().add('baz')
+        get_word_store().add(WordSample.make_empty("foo"))
+        get_mastered_word_store().add("baz")
 
-        with mock.patch('voc_builder.openai_svc.query_translation') as mocked_trans, mock.patch(
-            'voc_builder.openai_svc.query_get_word_choices'
-        ) as mocked_word:
+        with (
+            mock.patch("voc_builder.openai_svc.query_translation") as mocked_trans,
+            mock.patch("voc_builder.openai_svc.query_get_word_choices") as mocked_word,
+        ):
             mocked_trans.return_value = OPENAI_REPLY_TRANS
             mocked_word.return_value = OPENAI_REPLY_WORD
             ret = handle_cmd_trans("world foo bar baz!")
 
-            assert mocked_word.call_args[0] == ("world foo bar baz!", {'foo', 'baz'})
+            assert mocked_word.call_args[0] == ("world foo bar baz!", {"foo", "baz"})
             assert ret.stored_to_voc_book is True
-            assert ret.word_sample and ret.word_sample.word == 'world'
-            assert get_word_store().exists('world') is True
+            assert ret.word_sample
+            assert ret.word_sample.word == "world"
+            assert get_word_store().exists("world") is True
 
 
 class TestCmdNo:
     @pytest.fixture
     def has_last_added_word(self):
         """Simulate that a new word has been added through last action"""
-        word_foo = WordSample.make_empty('foo')
+        word_foo = WordSample.make_empty("foo")
         with mock.patch.object(
             LastActionResult,
-            'trans_result',
+            "trans_result",
             TransActionResult(
-                input_text='foo bar',
+                input_text="foo bar",
                 stored_to_voc_book=True,
                 word_sample=word_foo,
             ),
@@ -81,131 +79,139 @@ class TestCmdNo:
 
     def test_condition_not_met(self):
         ret = handle_cmd_no()
-        assert ret.error == 'last_trans_absent'
+        assert ret.error == "last_trans_absent"
 
     def test_word_invalid(self):
         """When the word is present but invalid for adding, also allows "no" action"""
-        word_foo = WordSample.make_empty('foo')
-        with mock.patch.object(
-            LastActionResult,
-            'trans_result',
-            TransActionResult(
-                input_text='foo bar',
-                stored_to_voc_book=False,
-                word_sample=word_foo,
-                invalid_for_adding=True,
+        word_foo = WordSample.make_empty("foo")
+        with (
+            mock.patch.object(
+                LastActionResult,
+                "trans_result",
+                TransActionResult(
+                    input_text="foo bar",
+                    stored_to_voc_book=False,
+                    word_sample=word_foo,
+                    invalid_for_adding=True,
+                ),
             ),
-        ), mock.patch(
-            'voc_builder.interactive.get_word_choices', side_effect=OpenAIServiceError()
+            mock.patch("voc_builder.interactive.get_word_choices", side_effect=OpenAIServiceError()),
         ):
             ret = handle_cmd_no()
-            assert ret.error == 'openai_svc_error'
+            assert ret.error == "openai_svc_error"
 
     def test_openai_svc_error(self, has_last_added_word):
-        with mock.patch(
-            'voc_builder.interactive.get_word_choices', side_effect=OpenAIServiceError()
-        ) as mocker:
+        with mock.patch("voc_builder.interactive.get_word_choices", side_effect=OpenAIServiceError()) as mocker:
             ret = handle_cmd_no()
-            assert get_word_store().exists('foo') is False
-            assert ret.error == 'openai_svc_error'
-            mocker.assert_called_once_with('foo bar', set())
+            assert get_word_store().exists("foo") is False
+            assert ret.error == "openai_svc_error"
+            mocker.assert_called_once_with("foo bar", set())
 
     def test_no_choices_error(self, has_last_added_word):
-        with mock.patch('voc_builder.interactive.get_word_choices', return_value=[]):
+        with mock.patch("voc_builder.interactive.get_word_choices", return_value=[]):
             ret = handle_cmd_no()
-            assert ret.error == 'no_choices_error'
+            assert ret.error == "no_choices_error"
 
     def test_user_skip_error(self, has_last_added_word):
-        with mock.patch(
-            'voc_builder.interactive.get_word_choices',
-            return_value=[
-                WordChoice(word='bar', word_normal='bar', word_meaning='bar', pronunciation='')
-            ],
-        ), mock.patch(
-            'voc_builder.interactive.ManuallySelector.prompt_select_words',
-            return_value=[ManuallySelector.choice_skip],
+        with (
+            mock.patch(
+                "voc_builder.interactive.get_word_choices",
+                return_value=[WordChoice(word="bar", word_normal="bar", word_meaning="bar", pronunciation="")],
+            ),
+            mock.patch(
+                "voc_builder.interactive.ManuallySelector.prompt_select_words",
+                return_value=[ManuallySelector.choice_skip],
+            ),
         ):
             ret = handle_cmd_no()
-            assert ret.error == 'user_skip'
+            assert ret.error == "user_skip"
 
     def test_validate_error(self, has_last_added_word):
-        with mock.patch(
-            'voc_builder.interactive.get_word_choices',
-            return_value=[
-                WordChoice(word='bar', word_normal='bar', word_meaning='bar', pronunciation='')
-            ],
-        ), mock.patch(
-            'voc_builder.interactive.ManuallySelector.prompt_select_words',
-            return_value=['bar'],
+        with (
+            mock.patch(
+                "voc_builder.interactive.get_word_choices",
+                return_value=[WordChoice(word="bar", word_normal="bar", word_meaning="bar", pronunciation="")],
+            ),
+            mock.patch(
+                "voc_builder.interactive.ManuallySelector.prompt_select_words",
+                return_value=["bar"],
+            ),
         ):
-            get_mastered_word_store().add('bar')
+            get_mastered_word_store().add("bar")
             ret = handle_cmd_no()
             assert not ret.words
-            assert ret.failed_words[0].word == 'bar'
-            assert ret.error == 'failed_to_add'
+            assert ret.failed_words[0].word == "bar"
+            assert ret.error == "failed_to_add"
 
     def test_check_single(self, has_last_added_word):
-        with mock.patch(
-            'voc_builder.interactive.get_word_choices',
-            return_value=[
-                WordChoice(word='bar', word_normal='bar', word_meaning='bar', pronunciation='')
-            ],
-        ), mock.patch(
-            'voc_builder.interactive.ManuallySelector.prompt_select_words',
-            return_value=['bar'],
+        with (
+            mock.patch(
+                "voc_builder.interactive.get_word_choices",
+                return_value=[WordChoice(word="bar", word_normal="bar", word_meaning="bar", pronunciation="")],
+            ),
+            mock.patch(
+                "voc_builder.interactive.ManuallySelector.prompt_select_words",
+                return_value=["bar"],
+            ),
         ):
             ret = handle_cmd_no()
-            assert get_word_store().exists('bar') is True
-            assert ret.words and ret.words[0].word == 'bar'
+            assert get_word_store().exists("bar") is True
+            assert ret.words
+            assert ret.words[0].word == "bar"
             assert ret.stored_to_voc_book is True
-            assert ret.error == ''
+            assert ret.error == ""
             assert LastActionResult.trans_result is None
 
     def test_check_multi(self, has_last_added_word):
-        with mock.patch(
-            'voc_builder.interactive.get_word_choices',
-            return_value=[
-                WordChoice(word='bar', word_normal='bar', word_meaning='bar', pronunciation=''),
-                WordChoice(word='foo', word_normal='foo', word_meaning='foo', pronunciation=''),
-            ],
-        ), mock.patch(
-            'voc_builder.interactive.ManuallySelector.prompt_select_words',
-            return_value=['bar', 'foo'],
+        with (
+            mock.patch(
+                "voc_builder.interactive.get_word_choices",
+                return_value=[
+                    WordChoice(word="bar", word_normal="bar", word_meaning="bar", pronunciation=""),
+                    WordChoice(word="foo", word_normal="foo", word_meaning="foo", pronunciation=""),
+                ],
+            ),
+            mock.patch(
+                "voc_builder.interactive.ManuallySelector.prompt_select_words",
+                return_value=["bar", "foo"],
+            ),
         ):
             ret = handle_cmd_no()
-            assert get_word_store().exists('bar') is True
-            assert get_word_store().exists('foo') is True
-            assert ret.words and ret.words[0].word == 'bar'
-            assert ret.words and ret.words[1].word == 'foo'
+            assert get_word_store().exists("bar") is True
+            assert get_word_store().exists("foo") is True
+            assert ret.words
+            assert ret.words[0].word == "bar"
+            assert ret.words[1].word == "foo"
             assert ret.stored_to_voc_book is True
-            assert ret.error == ''
+            assert ret.error == ""
             assert LastActionResult.trans_result is None
 
 
 class TestCmdStory:
     def test_not_enough_words(self):
         ret = handle_cmd_story()
-        assert ret.error == 'not_enough_words'
+        assert ret.error == "not_enough_words"
 
     def test_openai_svc_error(self):
-        get_word_store().add(WordSample.make_empty('foo'))
-        with mock.patch('voc_builder.openai_svc.query_story', side_effect=IOError()) as mocker:
+        get_word_store().add(WordSample.make_empty("foo"))
+        with mock.patch("voc_builder.openai_svc.query_story", side_effect=IOError()) as mocker:
             ret = handle_cmd_story(1)
-            assert ret.error == 'openai_svc_error'
-            assert mocker.call_args[0][0] == ['foo']
+            assert ret.error == "openai_svc_error"
+            assert mocker.call_args[0][0] == ["foo"]
 
     def test_normal(self):
-        get_word_store().add(WordSample.make_empty('foo'))
-        with mock.patch(
-            'voc_builder.openai_svc.query_story', return_value='story text'
-        ), mock.patch('voc_builder.interactive.StoryCmd.prompt_view_words', return_value=True):
+        get_word_store().add(WordSample.make_empty("foo"))
+        with (
+            mock.patch("voc_builder.openai_svc.query_story", return_value="story text"),
+            mock.patch("voc_builder.interactive.StoryCmd.prompt_view_words", return_value=True),
+        ):
             ret = handle_cmd_story(1)
-            word = get_word_store().get('foo')
+            word = get_word_store().get("foo")
 
             assert word is not None
             assert word.wp.storied_cnt == 1
             assert len(ret.words) == 1
-            assert ret.error == ''
+            assert ret.error == ""
 
 
 class TestCmdList:
@@ -213,34 +219,34 @@ class TestCmdList:
     def _setup(self):
         """Set up the word store with 50 words"""
         for i in range(50):
-            get_word_store().add(WordSample.make_empty(f'bar{i}'))
+            get_word_store().add(WordSample.make_empty(f"bar{i}"))
 
     def test_normal(self):
         ret = handle_cmd_list(ListCommandExpr(25))
         for i in range(25):
-            assert ret.words[i].word == f'bar{i+25}'
+            assert ret.words[i].word == f"bar{i+25}"
         assert len(ret.words) == 25
-        assert ret.error == ''
+        assert ret.error == ""
 
     def test_all_words(self):
         ret = handle_cmd_list(ListCommandExpr(all=True))
         assert len(ret.words) == 50
-        assert ret.error == ''
+        assert ret.error == ""
 
 
 def test_validate_result_word_misc(tmp_path):
     word_store = get_word_store()
-    validate_result_word(WordSample.make_empty('foo'), 'foo bar')
+    validate_result_word(WordSample.make_empty("foo"), "foo bar")
 
-    with pytest.raises(WordInvalidForAdding, match='already in your vocabulary book'):
-        word_store.add(WordSample.make_empty('foo'))
-        validate_result_word(WordSample.make_empty('foo'), 'foo bar')
-    word_store.remove('foo')
+    word_store.add(WordSample.make_empty("foo"))
+    with pytest.raises(WordInvalidForAdding, match="already in your vocabulary book"):
+        validate_result_word(WordSample.make_empty("foo"), "foo bar")
+    word_store.remove("foo")
 
-    with pytest.raises(WordInvalidForAdding, match='already mastered'):
-        get_mastered_word_store().add('foo')
-        validate_result_word(WordSample.make_empty('foo'), 'foo bar')
-    get_mastered_word_store().remove('foo')
+    get_mastered_word_store().add("foo")
+    with pytest.raises(WordInvalidForAdding, match="already mastered"):
+        validate_result_word(WordSample.make_empty("foo"), "foo bar")
+    get_mastered_word_store().remove("foo")
 
-    with pytest.raises(WordInvalidForAdding, match='not in the original text'):
-        validate_result_word(WordSample.make_empty('foo'), 'bar baz')
+    with pytest.raises(WordInvalidForAdding, match="not in the original text"):
+        validate_result_word(WordSample.make_empty("foo"), "bar baz")
