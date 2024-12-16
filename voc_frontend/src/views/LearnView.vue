@@ -19,7 +19,7 @@ onMounted(() => {
 
 onUpdated(() => {
 	nextTick(() => {
-		tippy('span[data-tippy-content]', {delay: 100})
+		tippy('.action-panel *[data-tippy-content]', {delay: 100})
 	})
 })
 
@@ -86,8 +86,6 @@ function exportWords() {
 							<col span="1" style="width: 120px" />
 							<col span="1" />
 							<col span="1" />
-							<col span="1" style="width: 120px" />
-							<col span="1" style="width: 80px" />
 						</colgroup>
 						
 						<thead>
@@ -95,12 +93,10 @@ function exportWords() {
 								<th scope="col">Word</th>
 								<th scope="col">Definition</th>
 								<th scope="col">Example sentence / Translation</th>
-								<th scope="col">Date Added</th>
-								<th scope="col">Actions</th>
 							</tr>
 						</thead>
 						<tbody>
-							<tr v-for="word of words" :key="word.ws.word">
+							<tr v-for="word of words" :key="word.ws.word" class="word-row">
 								<td>
 									<div class="word mb-1">
 										{{ word.ws.word }}
@@ -108,18 +104,24 @@ function exportWords() {
 									</div>
 									<div class="pronun text-secondary">{{ word.ws.pronunciation }}</div>
 								</td>
-								<td>{{ word.ws.word_meaning }}</td>
 								<td>
-									{{ word.ws.orig_text }} /
-									<span class="text-secondary">{{ word.ws.translated_text }}</span>
+									<p class="definition" v-for="def of word.ws.structured_definitions">
+										<span v-if="def.part_of_speech" class="part-of-speech text-secondary">[{{ def.part_of_speech }}]</span>
+										{{ def.definition }}
+									</p>
 								</td>
 								<td>
-									<span :data-tippy-content="word.dateAdded.toISO()">
-										{{ word.dateAdded.toRelativeCalendar() }}
-									</span>
-								</td>
-								<td>
-									<a class="word-action" href="javascript:void(0)" @click="removeWord(word.ws.word)">remove</a>
+									<p class="mb-2">{{ word.ws.orig_text }}</p>
+									<p class="text-secondary mt-1 mb-1">{{ word.ws.translated_text }}</p>
+
+									<div class="action-panel">
+										<span class="word-extra-info text-secondary me-3" :data-tippy-content="word.dateAdded.toISO()">
+											Added {{ word.dateAdded.toRelativeCalendar() }}
+										</span>
+										<a href="javascript:void(0)" @click="removeWord(word.ws.word)">
+											<i class="bi bi-trash" data-tippy-content="Remove"></i>
+										</a>
+									</div>
 								</td>
 							</tr>
 						</tbody>
@@ -133,7 +135,7 @@ function exportWords() {
 
 <style>
 .words-list {
-	font-size: 13px;
+	font-size: 14px;
 }
 .words-list .word {
 	font-size: 15px;
@@ -141,5 +143,32 @@ function exportWords() {
 }
 .words-list .proun {
 	font-size: 13px;
+}
+.words-list p.definition {
+	margin-bottom: 2px;
+}
+.word-row {
+	position: relative;
+}
+.word-row:hover .action-panel {
+	display: block;
+}
+.action-panel {
+	display: none;
+	position: absolute;
+	font-size: 16px;
+	right: 10px;
+	top: 50%;
+	transform: translateY(-50%);
+	border: 1px solid #ccc;
+	padding: 5px 14px;
+	background-color: white;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+.action-panel .word-extra-info {
+	font-size: 13px;
+}
+.action-panel i {
+	cursor: pointer;
 }
 </style>

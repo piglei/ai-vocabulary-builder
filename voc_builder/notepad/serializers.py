@@ -1,10 +1,49 @@
 """Serializers for request inputs."""
 
-from typing import Any, Dict, Literal, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
+import cattrs
 from pydantic import AnyHttpUrl, BaseModel, Field, field_validator
 
 from voc_builder.constants import ModelProvider
+from voc_builder.models import WordSample
+
+
+class WordSampleOutput(BaseModel):
+    """The output structure for word sample."""
+
+    word: str
+    word_normal: Optional[str]
+    pronunciation: str
+    orig_text: str
+    definitions: List[str]
+    translated_text: str
+
+    # Extra fields from the WordSample object
+    simple_definition: str
+    structured_definitions: list[dict[str, str]]
+
+    @classmethod
+    def from_db_obj(cls, ws: WordSample) -> "WordSampleOutput":
+        """Create an instance from a WordSample object."""
+        d = cattrs.unstructure(ws)
+        defs = ws.get_structured_definitions()
+        return cls(
+            simple_definition=ws.get_definitions_str(),
+            structured_definitions=cattrs.unstructure(defs),
+            **d,
+        )
+
+
+class TranslatedTextInput(BaseModel):
+    """A text with its translation
+
+    :param orig_text: The original text
+    :param translated_text: The translated text
+    """
+
+    orig_text: str
+    translated_text: str
 
 
 class DeleteWordsInput(BaseModel):
@@ -58,7 +97,6 @@ class OpenAIConfigInput(BaseModel):
 class GeminiConfigInput(BaseModel):
     api_key: str = Field(..., min_length=1)
     api_host: Union[AnyHttpUrl, Literal[""]]
-    model: str
     model: str
 
 

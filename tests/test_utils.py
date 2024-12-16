@@ -1,4 +1,4 @@
-from voc_builder.utils import highlight_story_text, highlight_words, tokenize_text
+from voc_builder.utils import get_word_candidates, tokenize_text
 
 
 def test_tokenize_text():
@@ -15,25 +15,6 @@ def test_tokenize_text():
     }
 
 
-def test_highlight_words():
+def test_get_words_candidates():
     s = "Welcome! This is the official documentation for Python."
-    assert (
-        highlight_words(s, ["welcome", "python"])
-        == "[bold][underline]Welcome[/underline][/bold]! This is the official documentation for [bold][underline]Python[/underline][/bold]."  # noqa: E501
-    )
-
-
-def test_highlight_words_with_extra_style():
-    s = "Welcome! This is the official documentation for Python."
-    assert (
-        highlight_words(s, ["welcome", "python"], extra_style="red")
-        == "[bold][underline][red]Welcome[/red][/underline][/bold]! This is the official documentation for [bold][underline][red]Python[/red][/underline][/bold]."  # noqa: E501
-    )
-
-
-def test_highlight_story_text():
-    s = "Jennifer believed that the ${serendipitous}$ meeting"
-    assert (
-        highlight_story_text(s)
-        == "Jennifer believed that the [bold][underline]serendipitous[/underline][/bold] meeting"
-    )
+    assert get_word_candidates(s) == ["Welcome", "official", "documentation", "Python"]

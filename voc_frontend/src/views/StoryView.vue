@@ -112,7 +112,7 @@ onUpdated(() => {
                                 {{ word.word }}
                                 <i class="bi bi-info-circle float-end word-card-info-icon" :data-tippy-content="word.orig_text + ' / ' + word.translated_text"></i>
                             </h5>
-                            <p class="card-text text-secondary">{{ word.word_meaning }}</p>
+                            <p class="card-text text-secondary">{{ word.simple_definition }}</p>
                         </div>
                     </div>
                 </div>

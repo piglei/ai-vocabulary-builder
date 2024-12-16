@@ -30,7 +30,7 @@ class VocCSVWriter:
                     str(i),
                     w.word,
                     w.ws.pronunciation,
-                    w.ws.get_word_meaning_display(),
+                    w.ws.get_definitions_str(),
                     "{} / {}".format(w.ws.orig_text, w.ws.translated_text),
                     w.date_added,
                 )

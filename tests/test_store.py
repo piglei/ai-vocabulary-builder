@@ -7,8 +7,19 @@ from pathlib import Path
 from tinydb import Query
 
 from voc_builder import config
-from voc_builder.models import GeminiConfig, OpenAIConfig, SystemSettings, WordProgress, WordSample
-from voc_builder.store import InternalStateStore, MasteredWordStore, WordStore
+from voc_builder.models import (
+    GeminiConfig,
+    OpenAIConfig,
+    SystemSettings,
+    WordProgress,
+    WordSample,
+)
+from voc_builder.store import (
+    InternalStateStore,
+    MasteredWordStore,
+    SystemSettingsStore,
+    WordStore,
+)
 
 
 class TestMasteredWordsStore:
@@ -149,17 +160,21 @@ class TestInternalStateStore:
         assert new_ts
         assert new_ts > ts
 
+
+class TestSysSettingsStore:
     def test_system_settings(self, tmp_path):
-        state_store = InternalStateStore(tmp_path / "foo.json")
-        assert state_store.get_system_settings() is None
+        store = SystemSettingsStore(tmp_path / "foo.json")
+        assert store.get_system_settings() is None
 
         settings = SystemSettings(
             model_provider="openai",
-            openai_config=OpenAIConfig(api_key="test_key", api_host="test_host", model="gtp-4o"),
+            openai_config=OpenAIConfig(
+                api_key="test_key", api_host="test_host", model="gtp-4o"
+            ),
             gemini_config=GeminiConfig(api_key="", api_host="", model=""),
         )
-        state_store.set_system_settings(settings)
-        saved_settings = state_store.get_system_settings()
+        store.set_system_settings(settings)
+        saved_settings = store.get_system_settings()
 
         assert saved_settings == settings
 
@@ -174,6 +189,11 @@ class TestStoreDir:
         monkeypatch.setenv("AIVOC_DATA_DIR", str(tmp_path))
 
         # Reload the module to pick up the new environment variable value
+        importlib.reload(config)
+
+        data_dir = Path(os.environ["AIVOC_DATA_DIR"]).expanduser()
+        assert config.DEFAULT_DB_PATH == data_dir / ".aivoc_db"
+        assert config.DEFAULT_CSV_FILE_PATH == data_dir / "aivoc_builder.csv"
         importlib.reload(config)
 
         data_dir = Path(os.environ["AIVOC_DATA_DIR"]).expanduser()

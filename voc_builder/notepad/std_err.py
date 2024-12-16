@@ -124,7 +124,7 @@ class ErrorCode:
     def __get__(
         self, obj: Union[None, object], obj_type: Union[None, Type]
     ) -> Union["ErrorCode", APIError]:
-        """When retriving `ErrorCode` via object attribute, always making a brand new `APIError`
+        """When retrieving `ErrorCode` via object attribute, always making a brand new `APIError`
         exception object
         """
         if obj is None:

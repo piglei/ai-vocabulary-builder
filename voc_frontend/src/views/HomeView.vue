@@ -49,13 +49,16 @@ const transResult = ref({
 const manuallySelectedWord = ref('')
 
 // The word sample object which has been extracted and saved to the voc book.
-const wordSample = ref({
+const wordSample = reactive({
 	word: '',
 	word_normal: '',
 	word_meaning: '',
 	pronunciation: '',
 	orig_text: '',
-	translated_text: ''
+	translated_text: '',
+
+	structured_definitions: [],
+	simple_definition: ''
 })
 
 const aiPickedExistedWord = ref('')
@@ -92,7 +95,7 @@ function extractWord() {
 
 	source.addEventListener('trans_partial', (event) => {
 		const parsedData = JSON.parse(event.data)
-		liveTranslatedText.value += parsedData.text
+		liveTranslatedText.value += parsedData.translated_text
 	})
 
 	// Translation finished, set the text and start extracting
@@ -174,8 +177,8 @@ async function extractWordSample(origText: string, translatedText: string) {
 	}
 
 	// Update global state and notify user
-	wordSample.value = resp.data.word_sample
-	const msg = `<strong>${wordSample.value.word}</strong> added, well done! 🎉`
+	Object.assign(wordSample, resp.data.word_sample)
+	const msg = `<strong>${wordSample.word}</strong> added, well done! 🎉`
 	extraStatus.value = JobStatus.Done
 	notyf.success({ message: msg, dismissible: true })
 }
@@ -186,7 +189,7 @@ async function removeWord() {
 	try {
 		await axios.post(window.API_ENDPOINT + '/api/word_samples/deletion/', {
 			mark_mastered: true,
-			words: [wordSample.value.word]
+			words: [wordSample.word]
 		})
 
         // Fade out the card
@@ -195,11 +198,11 @@ async function removeWord() {
             card.classList.add('removing')
             setTimeout(() => {
                 extraStatus.value = JobStatus.NotStarted
-                wordSample.value.word = ''
+                wordSample.word = ''
             }, 500)
         } else {
             extraStatus.value = JobStatus.NotStarted
-            wordSample.value.word = ''
+            wordSample.word = ''
         }
 
 		// Also get known words again because "mastered" words may change
@@ -212,7 +215,7 @@ async function removeWord() {
 
 // Save a word manually
 async function saveWordManually(removeCurrent = false) {
-	if (removeCurrent && wordSample.value.word !== '') {
+	if (removeCurrent && wordSample.word !== '') {
 		await removeWord()
 	}
 
@@ -235,8 +238,9 @@ async function saveWordManually(removeCurrent = false) {
 	}
 
 	// Update global state and notify user
-	wordSample.value = resp.data.word_sample
-	const msg = `<strong>${wordSample.value.word}</strong> added, well done! 🎉`
+	Object.assign(wordSample, resp.data.word_sample)
+
+	const msg = `<strong>${wordSample.word}</strong> added, well done! 🎉`
 	extraStatus.value = JobStatus.Done
 	notyf.success({ message: msg, dismissible: true})
 }
@@ -254,7 +258,7 @@ function resetStatuses() {
 	extraStatus.value = JobStatus.NotStarted
 
 	liveTranslatedText.value = ''
-	wordSample.value.word = ''
+	wordSample.word = ''
     aiPickedExistedWord.value = ''
     addedWords.splice(0, addedWords.length)
     existingWords.splice(0, existingWords.length)
@@ -379,10 +383,10 @@ function addExtraWord(word: string) {
 	manuallySelectedWord.value = word
 
 	// Push current word sample to the addedWords list
-	if (wordSample.value.word) {
+	if (wordSample.word) {
 		addedWords.push({
-			word: wordSample.value.word,
-			word_meaning: wordSample.value.word_meaning
+			word: wordSample.word,
+			simple_definition: wordSample.simple_definition
 		})
 	}
 	saveWordManually(false)
@@ -390,7 +394,7 @@ function addExtraWord(word: string) {
 
 // Check if the word has been added to the vocabulary already
 function wordIsAddedToVoc(word: string): boolean {
-	if (wordSample.value.word.toLowerCase() === word.toLowerCase()) {
+	if (wordSample.word.toLowerCase() === word.toLowerCase()) {
 		return true;
 	}
 	return addedWords.some(addedWord => addedWord.word.toLowerCase() === word.toLowerCase());
@@ -403,7 +407,7 @@ function wordIsMastered(word: string): boolean {
 
 // Get the known word object if the word is known
 function getExistingObj(word: string) {
-    return existingWords.find(w => w.word.toLowerCase() === word.toLowerCase()) || null;
+    return existingWords.find(w => w.word.toLowerCase() === word.toLowerCase()) || null
 }
 
 // Computed values start
@@ -445,6 +449,7 @@ onUpdated(() => {
     nextTick(() => {
         tippy('.inputted-text-card span[data-tippy-content]', {delay: 300})
         tippy('.icon-action[data-tippy-content]', {delay: 300, placement: 'bottom'})
+        tippy('.extraction-card span.normal-form[data-tippy-content]', {delay: 300, placement: 'bottom'})
     })
 })
 </script>
@@ -513,7 +518,7 @@ onUpdated(() => {
                                     data-tippy-content="This word is already in your vocabulary book."
                                     data-tippy-delay="1000"
                                 >
-                                    {{ t.token.value }}({{ t.existingObj.word_meaning }})
+                                    {{ t.token.value }}({{ t.existingObj.simple_definition }})
                                 </span>
                                 <span
                                     v-else-if="t.isMastered"
@@ -642,12 +647,22 @@ onUpdated(() => {
 				</div>
 				<div class="card-body">
 					<div class="card-text">
-						<h5>{{ wordSample.word }}</h5>
-						<p>
-							<strong>Pron：</strong> {{ wordSample.pronunciation }}
+						<h5>{{ wordSample.word }}
+							<span
+								:data-tippy-content='`The base form of "${wordSample.word}" is "${wordSample.word_normal}"`'
+								v-if="wordSample.word !== wordSample.word_normal"
+								class="normal-form text-secondary">
+								({{ wordSample.word_normal }})
+							</span>
+						</h5>
+						<p class="pron">
+							{{ wordSample.pronunciation }}
 							<i class="bi bi-volume-up ms-2" @click="playWord(wordSample.word)" style="cursor: pointer;"></i>
 						</p>
-						<p><strong>Mean：</strong> {{ wordSample.word_meaning }}</p>
+						<p class="definition" v-for="def of wordSample.structured_definitions">
+							<span v-if="def.part_of_speech" class="part-of-speech text-secondary">[{{ def.part_of_speech }}]</span>
+							{{ def.definition }}
+						</p>
 					</div>
 				</div>
 			</div>
@@ -656,7 +671,7 @@ onUpdated(() => {
 				<div class="card-header text-truncate">
 					<i class="bi bi-bookmarks"></i>
 					&nbsp;
-					<span class="card-title-text">{{ word.word }}({{ word.word_meaning }})</span>
+					<span class="card-title-text">{{ word.word }}({{ word.simple_definition }})</span>
 				</div>
 			</div>
 		</div>
@@ -682,10 +697,21 @@ onUpdated(() => {
 	height: 140px;
 	overflow-y: auto;
 }
-.extraction-card .card-text p {
-	margin-bottom: 0;
-	font-size: 13px;
+.extraction-card.removing {
+    animation: moveUpFadeOut 0.5s forwards;
 }
+.extraction-card .pron {
+	font-size: 14px;
+}
+.extraction-card .definition {
+	font-size: 14px;
+	margin-bottom: 2px;
+}
+.extraction-card h5 span {
+	font-weight: normal;
+	font-size: 14px;
+}
+
 .inprog-actions {
 	display: inline-block;
 }
@@ -749,10 +775,6 @@ onUpdated(() => {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-}
-
-.extraction-card.removing {
-    animation: moveUpFadeOut 0.5s forwards;
 }
 
 @keyframes moveUpFadeOut {

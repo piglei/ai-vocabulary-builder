@@ -25,7 +25,7 @@ window.bootstrap = bootstrap
 
 // Use the address in env vars if specified
 const apiEndpoint = import.meta.env.VITE_AIVOC_API_ENDPOINT
-if (apiEndpoint !== undefined) {
+if (apiEndpoint !== undefined && apiEndpoint !== '') {
     window.API_ENDPOINT = apiEndpoint
 } else {
     // Use current host as the API endpoint

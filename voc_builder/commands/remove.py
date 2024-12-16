@@ -24,7 +24,10 @@ def handle_remove(words: List[str], hard_remove: bool):
             if w_ret:
                 console.print(f'[bold]"{w}"[/bold] has been removed.', style="blue")
             elif m_ret:
-                console.print(f'[bold]"{w}"[/bold] has been removed form "mastered words".', style="blue")
+                console.print(
+                    f'[bold]"{w}"[/bold] has been removed form "mastered words".',
+                    style="blue",
+                )
             else:
                 console.print(f'[bold]"{w}"[/bold] not found.', style="red")
             continue
