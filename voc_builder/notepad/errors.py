@@ -11,6 +11,8 @@ class ErrorCodes:
 
     AI_SERVICE_ERROR = ErrorCode("AI service error")
     WORD_ALREADY_EXISTS = ErrorCode("The word already exists")
+    EXACTING_WORD_FAILED = ErrorCode("Failed to exact the word")
+    MANUALLY_SAVE_WORD_FAILED = ErrorCode("Failed to save the word")
 
 
 # 实例化一个全局对象

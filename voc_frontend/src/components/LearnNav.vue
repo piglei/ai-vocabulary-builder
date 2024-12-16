@@ -16,7 +16,7 @@ export default {
                 <a class="nav-link active">Words</a>
             </template>
             <template v-else>
-                <router-link class="nav-link" to="/learn">Words</router-link>
+                <router-link class="nav-link" to="/app/learn">Words</router-link>
             </template>
         </li>
         <li class="nav-item">
@@ -24,7 +24,7 @@ export default {
                 <a class="nav-link active">Story</a>
             </template>
             <template v-else>
-                <router-link class="nav-link" to="/learn/story">Story</router-link>
+                <router-link class="nav-link" to="/app/learn/story">Story</router-link>
             </template>
         </li>
         <li class="nav-item dropdown">
@@ -36,7 +36,7 @@ export default {
             </template>
             <ul class="dropdown-menu">
                 <li>
-                    <router-link class="nav-link" to="/learn/mastered-words">Mastered Words</router-link>
+                    <router-link class="nav-link" to="/app/learn/mastered-words">Mastered Words</router-link>
                 </li>
             </ul>
         </li>

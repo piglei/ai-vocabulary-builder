@@ -16,7 +16,7 @@ from sse_starlette.sse import EventSourceResponse
 from starlette.responses import FileResponse, StreamingResponse
 from typing_extensions import Annotated
 
-from voc_builder.ai_voc import (
+from voc_builder.ai_svc import (
     get_rare_word,
     get_story,
     get_translation,
@@ -84,9 +84,7 @@ app.add_middleware(
 
 
 @app.get("/")
-@app.get("/learn")
-@app.get("/learn/{any_path:path}")
-@app.get("/settings")
+@app.get("/app/{any_path:path}")
 def index():
     return FileResponse(str(ROOT_DIR / "dist/index.html"))
 
@@ -134,8 +132,7 @@ async def create_word_sample(trans_obj: TranslatedTextInput, response: Response)
         choice = await get_rare_word(trans_obj.orig_text, known_words)
     except Exception as exc:
         logger.exception("Error extracting word.")
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"error": "service_error", "message": str(exc)}
+        raise error_codes.EXACTING_WORD_FAILED.format(str(exc))
 
     word_sample = WordSample(
         word=choice.word,
@@ -146,12 +143,7 @@ async def create_word_sample(trans_obj: TranslatedTextInput, response: Response)
         orig_text=trans_obj.orig_text,
     )
 
-    try:
-        validate_result_word(word_sample, trans_obj.orig_text)
-    except WordInvalidForAdding as e:
-        logger.exception(f'Unable to add "{word_sample.word}".')
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"error": "word_invalid", "message": f"the word is invalid: {e}"}
+    validate_result_word(word_sample, trans_obj.orig_text)
 
     word_store.add(word_sample)
     return {
@@ -217,9 +209,7 @@ async def manually_save(req: ManuallySelectInput, response: Response):
     try:
         choice = await get_word_manually(req.orig_text, req.word)
     except Exception as exc:
-        logger.exception("Error get word manually.")
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"error": "service_error", "message": str(exc)}
+        raise error_codes.MANUALLY_SAVE_WORD_FAILED.format(str(exc))
 
     word_sample = WordSample(
         word=choice.word,
@@ -230,24 +220,13 @@ async def manually_save(req: ManuallySelectInput, response: Response):
         orig_text=req.orig_text,
     )
 
-    try:
-        validate_result_word(word_sample, req.orig_text)
-    except WordInvalidForAdding as e:
-        logger.exception(f'Unable to add "{word_sample.word}".')
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"error": "word_invalid", "message": f"the word is invalid: {e}"}
+    validate_result_word(word_sample, req.orig_text)
 
     word_store.add(word_sample)
     return {
         "word_sample": WordSampleOutput.from_db_obj(word_sample),
         "count": word_store.count(),
     }
-
-
-def validate_result_word(word: WordSample, orig_text: str):
-    """Check if a result word is valid before it can be put into vocabulary book"""
-    if get_word_store().exists(word.word):
-        raise error_codes.WORD_ALREADY_EXISTS.set_data(word.word)
 
 
 @app.get("/api/settings")
@@ -303,8 +282,11 @@ async def gen_story_sse(words: List[WordSample]) -> AsyncGenerator[Dict, None]:
         "data": json.dumps([w.model_dump(mode="json") for w in out_words]),
     }
 
-    async for text in get_story(words):
-        yield {"event": "story_partial", "data": text}
+    try:
+        async for text in get_story(words):
+            yield {"event": "story_partial", "data": text}
+    except AIServiceError as e:
+        yield {"event": "error", "data": json.dumps({"message": str(e)})}
     yield {"event": "story", "data": text}
 
 
@@ -335,3 +317,9 @@ def export_words():
     filename = now.strftime("ai_vov_words_%Y%m%d_%H%M.csv")
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return StreamingResponse(fp, headers=headers)
+
+
+def validate_result_word(word: WordSample, orig_text: str):
+    """Check if a result word is valid before it can be put into vocabulary book"""
+    if get_word_store().exists(word.word):
+        raise error_codes.WORD_ALREADY_EXISTS.set_data(word.word)

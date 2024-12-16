@@ -36,7 +36,7 @@ class WordSampleOutput(BaseModel):
 
 
 class TranslatedTextInput(BaseModel):
-    """A text with its translation
+    """A text with its translation.
 
     :param orig_text: The original text
     :param translated_text: The translated text
@@ -71,6 +71,12 @@ class ManuallySelectInput(BaseModel):
     word: str = Field(..., min_length=1)
 
 
+class DeleteMasteredWordsInput(BaseModel):
+    """The input data for delete mastered words."""
+
+    words: list[str]
+
+
 class SettingsInput(BaseModel):
     """The input data for saving system settings"""
 
@@ -93,14 +99,22 @@ class OpenAIConfigInput(BaseModel):
     api_host: Union[AnyHttpUrl, Literal[""]]
     model: str
 
+    @field_validator("model")
+    @classmethod
+    def validate_model(cls, value):
+        if not value:
+            raise ValueError("model is required")
+        return value
+
 
 class GeminiConfigInput(BaseModel):
     api_key: str = Field(..., min_length=1)
     api_host: Union[AnyHttpUrl, Literal[""]]
     model: str
 
-
-class DeleteMasteredWordsInput(BaseModel):
-    """The input data for delete mastered words."""
-
-    words: list[str]
+    @field_validator("model")
+    @classmethod
+    def validate_model(cls, value):
+        if not value:
+            raise ValueError("model is required")
+        return value

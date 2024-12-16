@@ -14,6 +14,7 @@ class WordDefinition:
 
     @classmethod
     def from_text(cls, text: str) -> "WordDefinition":
+        """Create a WordDefinition object from text like "[noun] ..."."""
         if m := RE_PART_OF_SPEECH.search(text):
             part_of_speech = m.group(1)
             definition = text[m.end() :].strip()
@@ -23,7 +24,7 @@ class WordDefinition:
 
 @dataclass
 class WordSample:
-    """A word sample which is ready to be added into a vocabulary book
+    """A word sample which is ready to be added into the vocabulary book.
 
     :param word: The word itself, for example: "world"
     :param word_normal: The normal form of the given word, `None` means unknown
@@ -59,7 +60,7 @@ class WordSample:
 
 @dataclass
 class WordChoice:
-    """A word for choice
+    """A word for choice.
 
     :param word: The word itself, for example: "world"
     :param word_normal: The normal form of the given word
@@ -75,7 +76,7 @@ class WordChoice:
 
 @dataclass
 class WordProgress:
-    """Store the learning progress of a word
+    """Store the learning progress of a word.
 
     :param word: The word itself, for example: "world"
     :param quiz_cnt: The count of being used for quiz

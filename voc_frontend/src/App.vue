@@ -22,12 +22,12 @@
               <router-link class="nav-link" to="/">Build</router-link>
             </li>
             <li class="nav-item">
-              <router-link class="nav-link" to="/learn">Learn</router-link>
+              <router-link class="nav-link" to="/app/learn">Learn</router-link>
             </li>
           </ul>
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <router-link class="nav-link" to="/settings">
+              <router-link class="nav-link" to="/app/settings">
                 <i class="bi bi-gear"></i>
               </router-link>
             </li>

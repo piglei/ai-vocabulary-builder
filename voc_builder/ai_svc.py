@@ -16,7 +16,7 @@ logger = logging.getLogger()
 
 
 class WordChoiceModelResp(BaseModel):
-    """The word returned by LLM service"""
+    """The word returned by LLM service."""
 
     word: str
     word_base_form: str
@@ -33,11 +33,11 @@ class WordChoiceModelResp(BaseModel):
 
 
 async def get_translation(text: str) -> AsyncGenerator[str, None]:
-    """Get the translated content of the given text.
+    """Get the translated text of the given text.
 
     :param text: The text which needs to be translated.
     :return: The translation text.
-    :raise VocBuilderError: when unable to finish the API call or reply is malformed.
+    :raise AIServiceError: when unable to finish the API call or reply is malformed.
     """
 
     try:
@@ -137,7 +137,12 @@ Paragraph for reference: {text}
 
 
 async def get_word_manually(text: str, word: str) -> WordChoice:
-    """Get a word that is manually selected by user."""
+    """Get a word that is manually selected by user.
+
+    :param text: The text which contains the word.
+    :param word: The selected word.
+    :raise: AIServiceError
+    """
     user_content = prompt_word_manually_user_tmpl.format(text=text, word=word)
     prompt = prompt_word_manually_system + user_content
     agent: Agent = Agent(create_ai_model(), result_type=WordChoiceModelResp)
@@ -197,7 +202,7 @@ async def query_story(words: List[str]) -> AsyncGenerator[str, None]:
 def create_ai_model():
     """Create the AI model object for calling with LLM service.
 
-    :raise ValueError: when the system settings is invalid .
+    :raise AIModelNotConfiguredError: when the model settings is invalid.
     """
     settings = get_sys_settings_store().get_system_settings()
     if not settings:
