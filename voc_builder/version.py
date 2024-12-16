@@ -1,139 +1,105 @@
-"""Many functions of this module are copied from https://github.com/wimglenn/johnnydep
-"""
+"""Many functions of this module are copied from https://github.com/wimglenn/johnnydep"""
+
 import logging
-import sys
 import time
-from subprocess import STDOUT, CalledProcessError, check_output
+from pathlib import Path
+from typing import List, Optional
 from urllib.parse import urlparse
 
-import pkg_resources
+import unearth
 from packaging import version
-from rich.console import Console
+from packaging.requirements import Requirement
+from packaging.tags import parse_tag
+from packaging.version import Version
 
 from voc_builder import __version__
 from voc_builder.store import get_internal_state_store
 
-log = logging.getLogger(__name__)
-
+logger = logging.getLogger()
 
 DEFAULT_INDEX = "https://pypi.org/simple/"
 
-PACKAGE_NAME = 'ai-vocabulary-builder'
+PACKAGE_NAME = "ai-vocabulary-builder"
 
-# Perform version checking only after 24 hours have passed since the last action.
-VERSION_CHECKING_INTERVAL = 3600 * 24
+# Perform version checking only after 8 hours have passed since the last action.
+VERSION_CHECKING_INTERVAL = 3600 * 8
 
 
-def check_for_new_versions(console: Console):
-    """Check if there's a new versions available, will output messages to the given
-    console object.
-    """
+def get_new_version() -> Optional[str]:
+    """Check if there's a new versions available."""
     state_store = get_internal_state_store()
-    last_ver_checking_ts = state_store.get_last_ver_checking_ts()
-    if last_ver_checking_ts and time.time() - last_ver_checking_ts < VERSION_CHECKING_INTERVAL:
-        return None
+    state = state_store.get_internal_state()
+    if time.time() - state.last_ver_checking_ts < VERSION_CHECKING_INTERVAL:
+        return state.server_latest_version
+
+    state.last_ver_checking_ts = time.time()
+    state_store.set_internal_state(state)
 
     try:
         current = __version__
-        latest = get_versions(PACKAGE_NAME)[-1]
+        latest = JohnnyDist(
+            PACKAGE_NAME, index_urls=(DEFAULT_INDEX,)
+        ).versions_available()[-1]
     finally:
         # Alway set last version checking time
-        state_store.set_last_ver_checking_ts()
+        state_store.set_internal_state(state)
+
+    # Save the latest version to the state
+    state.server_latest_version = latest
+    state_store.set_internal_state(state)
 
     if version.parse(current) < version.parse(latest):
-        console.print(
-            rf'\[notice] A new release of "AI vocabulary builder" is available, {current}(current) -> {latest}(latest)',  # noqa: E501
-            style='chartreuse2',
+        return latest
+    return None
+
+
+class JohnnyDist:
+    def __init__(self, req_string, index_urls=(), env=None):
+        if isinstance(req_string, Path):
+            req_string = str(req_string)
+        self._index_urls = index_urls
+        self._env = env
+        self.req = Requirement(req_string)
+
+    def versions_available(self):
+        versions = _get_versions(self.req, self._index_urls, self._env)
+        return versions
+
+
+def _get_package_finder(index_urls, env):
+    trusted_hosts = ()
+    for index_url in index_urls:
+        host = urlparse(index_url).hostname
+        if host != "pypi.org":
+            trusted_hosts += (host,)  # type: ignore
+    target_python = None
+    if env is not None:
+        envd = dict(env)
+        target_python = unearth.TargetPython(
+            py_ver=envd["py_ver"],
+            impl=envd["impl"],
         )
-        console.print(
-            r'\[notice] To update, run "pip install --upgrade ai-vocabulary-builder"',
-            style='chartreuse2',
-        )
+        valid_tags: List = []
+        for tag in envd["supported_tags"].split(","):
+            valid_tags.extend(parse_tag(tag))
+        target_python._valid_tags = valid_tags
+    package_finder = unearth.PackageFinder(
+        index_urls=index_urls,
+        target_python=target_python,
+        trusted_hosts=trusted_hosts,
+    )
+    return package_finder
 
 
-def _get_pip_version():
-    # try to get pip version without actually importing pip
-    # setuptools gets upset if you import pip before importing setuptools..
-    try:
-        import importlib.metadata  # Python 3.8+
-
-        return importlib.metadata.version("pip")
-    except Exception:
-        pass
-    import pip
-
-    return pip.__version__
+def _get_packages(project_name: str, index_urls: tuple, env: tuple):
+    finder = _get_package_finder(index_urls, env)
+    seq = finder.find_all_packages(project_name, allow_yanked=True)
+    result = list(seq)
+    return result
 
 
-def _get_wheel_args(index_url, env, extra_index_url):
-    args = [
-        sys.executable,
-        "-m",
-        "pip",
-        "wheel",
-        "-vvv",  # --verbose x3
-        "--no-deps",
-        "--no-cache-dir",
-        "--disable-pip-version-check",
-    ]
-    if index_url is not None:
-        args += ["--index-url", index_url]
-        if index_url != DEFAULT_INDEX:
-            hostname = urlparse(index_url).hostname
-            if hostname:
-                args += ["--trusted-host", hostname]
-    if extra_index_url is not None:
-        args += [
-            "--extra-index-url",
-            extra_index_url,
-            "--trusted-host",
-            urlparse(extra_index_url).hostname,
-        ]
-    if env is None:
-        pip_version = _get_pip_version()
-    else:
-        pip_version = dict(env)["pip_version"]
-        args[0] = dict(env)["python_executable"]
-    pip_major, pip_minor = pip_version.split(".")[0:2]
-    pip_major = int(pip_major)
-    pip_minor = int(pip_minor)
-    if pip_major >= 10:
-        args.append("--progress-bar=off")
-    if (20, 3) <= (pip_major, pip_minor) < (21, 1):
-        # See https://github.com/pypa/pip/issues/9139#issuecomment-735443177
-        args.append("--use-deprecated=legacy-resolver")
-    return args
-
-
-def get_versions(dist_name, index_url=None, env=None, extra_index_url=None):
-    bare_name = pkg_resources.Requirement.parse(dist_name).name  # type: ignore
-    log.debug("checking versions available, dist: %s", bare_name)
-    args = _get_wheel_args(index_url, env, extra_index_url) + [dist_name + "==showmethemoney"]
-    try:
-        out = check_output(args, stderr=STDOUT)
-    except CalledProcessError as err:
-        # expected. we forced this by using a non-existing version number.
-        out = getattr(err, "output", b"")
-    else:
-        log.warning(out)
-        raise Exception("Unexpected success:" + " ".join(args))
-    out_str = out.decode("utf-8")
-    lines = []
-    msg = "Could not find a version that satisfies the requirement"
-    for line in out_str.splitlines():
-        if msg in line:
-            lines.append(line)
-    try:
-        [line] = lines
-    except ValueError:
-        log.warning("failed to get versions")
-        raise
-    prefix = "(from versions: "
-    start = line.index(prefix) + len(prefix)
-    stop = line.rfind(")")
-    versions = line[start:stop]
-    if versions.lower() == "none":
-        return []
-    versions = [v.strip() for v in versions.split(",") if v.strip()]
-    log.debug("found versions, dist: %s, versions: %s", bare_name, versions)
-    return versions
+def _get_versions(req: Requirement, index_urls: tuple, env: tuple):
+    packages = _get_packages(req.name, index_urls, env)
+    versions = {p.version for p in packages}
+    version_list = sorted(versions, key=Version)
+    return version_list

@@ -23,6 +23,11 @@ app.mount('#app')
 
 window.bootstrap = bootstrap
 
-// window.API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT
-// Use current host as the API endpoint
-window.API_ENDPOINT = ''
+// Use the address in env vars if specified
+const apiEndpoint = import.meta.env.VITE_AIVOC_API_ENDPOINT
+if (apiEndpoint !== undefined && apiEndpoint !== '') {
+    window.API_ENDPOINT = apiEndpoint
+} else {
+    // Use current host as the API endpoint
+    window.API_ENDPOINT = ''
+}

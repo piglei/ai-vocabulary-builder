@@ -1,0 +1,28 @@
+fail_fast: true
+repos:
+  - repo: local
+    hooks:
+      # 总是使用 --force-exclude 来让 ruff 配置文件中的 exclude 生效
+      - id: ruff-check-fix
+        name: ruff-check-fix
+        language: system
+        types: [python]
+        # 修复包导入顺序问题，类似 isort 工具
+        entry: poetry run ruff check --force-exclude --select I --fix --no-cache 
+      - id: ruff-format
+        name: ruff-format
+        language: system
+        types: [python]
+        entry: poetry run ruff format --force-exclude --no-cache
+      - id: ruff-check
+        name: ruff-check
+        language: system
+        types: [python]
+        entry: poetry run ruff check --force-exclude --no-cache
+      - id: mypy
+        name: run mypy check for "voc_builder"
+        language: system
+        types: [python]
+        pass_filenames: false
+        entry: bash -c "poetry run mypy ./voc_builder --config-file=./pyproject.toml"
+        files: '^voc_builder/'

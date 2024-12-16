@@ -1,28 +1,63 @@
-import asyncio
+import datetime
 import json
 import logging
 import pathlib
-from dataclasses import asdict
-from typing import AsyncGenerator, Dict, List
+from io import StringIO
+from typing import AsyncGenerator, Dict, List, Literal
 
+import cattrs
 from fastapi import FastAPI, Query, Response, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, conlist
+from pydantic import ValidationError
 from sse_starlette.sse import EventSourceResponse
-from starlette.responses import FileResponse
+from starlette.responses import FileResponse, StreamingResponse
 from typing_extensions import Annotated
 
-from voc_builder.exceptions import OpenAIServiceError, WordInvalidForAdding
-from voc_builder.models import LiveTranslationInfo, WordSample
-from voc_builder.openai_svc import (
+import voc_builder
+from voc_builder.ai_svc import (
+    get_rare_word,
+    get_story,
     get_translation,
-    get_uncommon_word,
-    get_word_choices,
     get_word_manually,
 )
-from voc_builder.store import get_mastered_word_store, get_word_store
+from voc_builder.constants import GEMINI_MODELS, OPENAI_MODELS, ModelProvider
+from voc_builder.exceptions import AIServiceError
+from voc_builder.export import VocCSVWriter
+from voc_builder.models import (
+    GeminiConfig,
+    OpenAIConfig,
+    WordSample,
+    build_default_settings,
+)
+from voc_builder.store import (
+    get_mastered_word_store,
+    get_sys_settings_store,
+    get_word_store,
+)
 from voc_builder.utils import tokenize_text
+from voc_builder.version import get_new_version
+
+from .errors import (
+    api_error_exception_handler,
+    error_codes,
+    pydantic_exception_handler,
+    req_validation_exception_handler,
+)
+from .serializers import (
+    DeleteMasteredWordsInput,
+    DeleteWordsInput,
+    GeminiConfigInput,
+    GetKnownWordsByTextInput,
+    ManuallySelectInput,
+    OpenAIConfigInput,
+    SettingsInput,
+    TranslatedTextInput,
+    WordSampleOutput,
+)
+from .std_err import APIError
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +65,9 @@ ROOT_DIR = pathlib.Path(__file__).parent.resolve()
 
 app = FastAPI()
 
+app.add_exception_handler(ValidationError, pydantic_exception_handler)  # type: ignore
+app.add_exception_handler(RequestValidationError, req_validation_exception_handler)  # type: ignore
+app.add_exception_handler(APIError, api_error_exception_handler)  # type: ignore
 app.mount("/assets", StaticFiles(directory=str(ROOT_DIR / "dist/assets")), name="assets")
 
 
@@ -48,13 +86,15 @@ app.add_middleware(
 
 
 @app.get("/")
-@app.get("/manage")
+@app.get("/app/{any_path:path}")
 def index():
-    return FileResponse(str(ROOT_DIR / 'dist/index.html'))
+    return FileResponse(str(ROOT_DIR / "dist/index.html"))
 
 
 @app.get("/api/translations/")
-def create_new_translations(user_text: Annotated[str, Query(min_length=12, max_length=1600)]):
+def create_new_translations(
+    user_text: Annotated[str, Query(min_length=12, max_length=1600)],
+):
     """Create a new translation, return the response in SSE protocol."""
     return EventSourceResponse(gen_translation_sse(user_text))
 
@@ -64,46 +104,24 @@ async def gen_translation_sse(text: str) -> AsyncGenerator[Dict, None]:
 
     :param text: The text to be translated.
     """
-    live_info = LiveTranslationInfo()
-    # Start the translation task in background
-    loop = asyncio.get_running_loop()
-    task_trans = loop.run_in_executor(None, get_translation, text, live_info)
-
-    # Send the partial translation to the client
-    sent_length = 0
-    while not live_info.is_finished and not task_trans.done():
-        if len(live_info.translated_text) > sent_length:
+    try:
+        async for translated_text in get_translation(text):
             yield {
                 "event": "trans_partial",
-                "data": json.dumps({"text": live_info.translated_text[sent_length:]}),
+                "data": json.dumps({"translated_text": translated_text}),
             }
-            sent_length = len(live_info.translated_text)
-        await asyncio.sleep(0.1)
-
-    # Send the full translation to the client
-    try:
-        await task_trans
-    except Exception as exc:
-        logger.exception("Error getting translation.")
-        yield {"event": "error", "data": json.dumps({'message': str(exc)})}
+    except AIServiceError as e:
+        yield {"event": "error", "data": json.dumps({"message": str(e)})}
         return
 
-    yield {"event": "translation", "data": json.dumps(asdict(task_trans.result()))}
-
-
-class TranslatedText(BaseModel):
-    """A text with its translation
-
-    :param orig_text: The original text
-    :param translated_text: The translated text
-    """
-
-    orig_text: str
-    translated_text: str
+    yield {
+        "event": "translation",
+        "data": json.dumps({"text": text, "translated_text": translated_text}),
+    }
 
 
 @app.post("/api/word_samples/extractions/")
-def create_word_sample(trans_obj: TranslatedText, response: Response):
+async def create_word_sample(trans_obj: TranslatedTextInput, response: Response):
     """Create a new word sample from the translated result."""
     mastered_word_s = get_mastered_word_store()
     word_store = get_word_store()
@@ -113,107 +131,63 @@ def create_word_sample(trans_obj: TranslatedText, response: Response):
     known_words = word_store.filter(orig_words) | mastered_word_s.filter(orig_words)
 
     try:
-        choice = get_uncommon_word(trans_obj.orig_text, known_words)
+        choice = await get_rare_word(trans_obj.orig_text, known_words)
     except Exception as exc:
         logger.exception("Error extracting word.")
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"error": "service_error", "message": str(exc)}
+        raise error_codes.EXACTING_WORD_FAILED.format(str(exc))
 
     word_sample = WordSample(
         word=choice.word,
         word_normal=choice.word_normal,
-        word_meaning=choice.word_meaning,
+        definitions=choice.definitions,
         pronunciation=choice.pronunciation,
         translated_text=trans_obj.translated_text,
         orig_text=trans_obj.orig_text,
     )
 
-    try:
-        validate_result_word(word_sample, trans_obj.orig_text)
-    except WordInvalidForAdding as e:
-        logger.exception(f'Unable to add "{word_sample.word}", reason: {e}')
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"error": "word_invalid", "message": f"the word is invalid: {e}"}
+    validate_result_word(word_sample, trans_obj.orig_text)
 
     word_store.add(word_sample)
-    return {"word_sample": word_sample, "count": word_store.count()}
+    return {
+        "word_sample": WordSampleOutput.from_db_obj(word_sample),
+        "count": word_store.count(),
+    }
 
 
-@app.post("/api/word_samples/deletion/")
-def delete_word_samples(words: List[str], response: Response):
-    """Delete a list of words."""
-    for word in words:
-        get_word_store().remove(word)
-    response.status_code = status.HTTP_204_NO_CONTENT
-
-
-@app.post("/api/word_choices/extractions/")
-def extract_word_choices(trans_obj: TranslatedText, response: Response):
-    """Extract a new word from a translated text automatically."""
+@app.post("/api/known_words/find_by_text/")
+def find_known_words_by_text(req: GetKnownWordsByTextInput, response: Response):
+    """Find all known words in the vocabulary book by the given text."""
     mastered_word_s = get_mastered_word_store()
     word_store = get_word_store()
 
-    orig_words = tokenize_text(trans_obj.orig_text)
+    orig_words = tokenize_text(req.text)
+
     # Words already in vocabulary book and marked as mastered are treated as "known"
-    known_words = word_store.filter(orig_words) | mastered_word_s.filter(orig_words)
-
-    try:
-        choices = get_word_choices(trans_obj.orig_text, known_words)
-    except OpenAIServiceError as exc:
-        logger.exception("Error extracting choices.")
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"error": "service_error", "message": str(exc)}
-
-    return {"word_choices": choices}
-
-
-class WordChoice(BaseModel):
-    word: str
-    word_normal: str
-    word_meaning: str
-    pronunciation: str
-
-
-class WordChoicesForSave(BaseModel):
-    """Accept a list of choices for saving"""
-
-    orig_text: str = Field(..., min_length=1)
-    translated_text: str = Field(..., min_length=1)
-    choices: conlist(WordChoice, min_items=1)
-
-
-@app.post("/api/word_choices/save/")
-def save_word_choices(user_choices: WordChoicesForSave, response: Response):
-    """Save a list of word choices to the store."""
-    word_store = get_word_store()
-
-    words: List[WordSample] = []
-    failed_words: List[WordSample] = []
-    for word_sample in user_choices.choices:
-        sample = WordSample(
-            word=word_sample.word,
-            word_normal=word_sample.word_normal,
-            word_meaning=word_sample.word_meaning,
-            pronunciation=word_sample.pronunciation,
-            translated_text=user_choices.translated_text,
-            orig_text=user_choices.orig_text,
+    existing_words = []
+    for w in word_store.filter(orig_words):
+        word_obj = word_store.get(w)
+        assert word_obj
+        obj = WordSampleOutput.from_db_obj(word_obj.ws)
+        existing_words.append(
+            {"word": obj.word, "simple_definition": obj.simple_definition}
         )
-        try:
-            validate_result_word(sample, sample.orig_text)
-        except WordInvalidForAdding as e:
-            logger.exception(f'Unable to add "{word_sample.word}", reason: {e}')
-            failed_words.append(sample)
-        else:
-            words.append(sample)
 
-    if not words:
-        return {"error": "choices_invalid", "message": "all choices are invalid for adding"}
+    mastered_words = mastered_word_s.filter(orig_words)
+    return JSONResponse(
+        {"existing_words": list(existing_words), "mastered_words": list(mastered_words)}
+    )
 
+
+@app.post("/api/word_samples/deletion/")
+def delete_word_samples(req: DeleteWordsInput, response: Response):
+    """Delete a list of words."""
     word_store = get_word_store()
-    for word in words:
-        word_store.add(word)
-
-    return {"added_words": words, "failed_words": failed_words, "count": word_store.count()}
+    mastered_word_s = get_mastered_word_store()
+    for word in req.words:
+        word_store.remove(word)
+        if req.mark_mastered:
+            mastered_word_s.add(word)
+    response.status_code = status.HTTP_204_NO_CONTENT
 
 
 @app.get("/api/word_samples/")
@@ -222,53 +196,151 @@ def list_word_samples():
     word_store = get_word_store()
     words = word_store.list_latest()
     # Remove the fields not necessary, sort by -date_added
-    words_refined = [{"ws": obj.ws, "ts_date_added": obj.ts_date_added} for obj in reversed(words)]
+    words_refined = [
+        {"ws": WordSampleOutput.from_db_obj(obj.ws), "ts_date_added": obj.ts_date_added}
+        for obj in reversed(words)
+    ]
     return {"words": words_refined, "count": len(words)}
 
 
-class ManuallySaveRequest(BaseModel):
-    orig_text: str = Field(..., min_length=1)
-    translated_text: str = Field(..., min_length=1)
-    word: str = Field(..., min_length=1)
-
-
 @app.post("/api/word_samples/manually_save/")
-def manually_save(req: ManuallySaveRequest, response: Response):
+async def manually_save(req: ManuallySelectInput, response: Response):
     """Manually save a word to the store."""
     word_store = get_word_store()
 
     try:
-        choice = get_word_manually(req.orig_text, req.word)
+        choice = await get_word_manually(req.orig_text, req.word)
     except Exception as exc:
-        logger.exception("Error get word manually.")
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"error": "service_error", "message": str(exc)}
+        raise error_codes.MANUALLY_SAVE_WORD_FAILED.format(str(exc))
 
     word_sample = WordSample(
         word=choice.word,
         word_normal=choice.word_normal,
-        word_meaning=choice.word_meaning,
+        definitions=choice.definitions,
         pronunciation=choice.pronunciation,
         translated_text=req.translated_text,
         orig_text=req.orig_text,
     )
 
-    try:
-        validate_result_word(word_sample, req.orig_text)
-    except WordInvalidForAdding as e:
-        logger.exception(f'Unable to add "{word_sample.word}", reason: {e}')
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"error": "word_invalid", "message": f"the word is invalid: {e}"}
+    validate_result_word(word_sample, req.orig_text)
 
     word_store.add(word_sample)
-    return {"word_sample": word_sample, "count": word_store.count()}
+    return {
+        "word_sample": WordSampleOutput.from_db_obj(word_sample),
+        "count": word_store.count(),
+    }
+
+
+@app.get("/api/system_status")
+async def get_system_status(response: Response):
+    """Get the system status."""
+    settings = get_sys_settings_store().get_system_settings()
+    model_settings_initialized = bool(settings and settings.model_provider)
+    try:
+        new_version = get_new_version()
+    except Exception:
+        logger.exception("Error checking new version.")
+        new_version = None
+    return JSONResponse(
+        {
+            "version": voc_builder.__version__,
+            "model_settings_initialized": model_settings_initialized,
+            "new_version": new_version,
+        }
+    )
+
+
+@app.get("/api/settings")
+async def get_settings(response: Response):
+    """Get the system settings."""
+    settings = get_sys_settings_store().get_system_settings()
+    if not settings:
+        settings = build_default_settings()
+    return JSONResponse(
+        {
+            "settings": cattrs.unstructure(settings),
+            "model_options": {"gemini": GEMINI_MODELS, "openai": OPENAI_MODELS},
+        }
+    )
+
+
+@app.post("/api/settings")
+async def save_settings(settings_input: SettingsInput, response: Response):
+    """Save the system settings."""
+    settings_store = get_sys_settings_store()
+    settings = settings_store.get_system_settings()
+    if not settings:
+        settings = build_default_settings()
+
+    settings.model_provider = settings_input.model_provider
+    # Update the model settings only for the selected provider type, validate the input
+    # by pydantic models.
+    if settings_input.model_provider == ModelProvider.OPENAI.value:
+        o_obj = OpenAIConfigInput(**settings_input.openai_config)
+        settings.openai_config = OpenAIConfig(**o_obj.model_dump(mode="json"))
+    elif settings_input.model_provider == ModelProvider.GEMINI.value:
+        g_obj = GeminiConfigInput(**settings_input.gemini_config)
+        settings.gemini_config = GeminiConfig(**g_obj.model_dump(mode="json"))
+
+    settings_store.set_system_settings(settings)
+    return {}
+
+
+@app.get("/api/stories/")
+def create_new_story(words_num: Annotated[Literal["6", "12", "24"], Query(...)]):
+    """Create a new story."""
+    word_store = get_word_store()
+    words = word_store.pick_story_words(int(words_num))
+    word_store.update_story_words(words)
+    return EventSourceResponse(gen_story_sse(words))
+
+
+async def gen_story_sse(words: List[WordSample]) -> AsyncGenerator[Dict, None]:
+    """Generate the SSE events for the story writing progress."""
+    out_words = [WordSampleOutput.from_db_obj(w) for w in words]
+    yield {
+        "event": "words",
+        "data": json.dumps([w.model_dump(mode="json") for w in out_words]),
+    }
+
+    try:
+        async for text in get_story(words):
+            yield {"event": "story_partial", "data": text}
+    except AIServiceError as e:
+        yield {"event": "error", "data": json.dumps({"message": str(e)})}
+    yield {"event": "story", "data": text}
+
+
+@app.get("/api/mastered_words/")
+def get_mastered_words():
+    """Get all mastered words."""
+    words = get_mastered_word_store().all()
+    return {"words": words, "count": len(words)}
+
+
+@app.post("/api/mastered_words/deletion/")
+def delete_mastered_words(req: DeleteMasteredWordsInput, response: Response):
+    """Delete words from the mastered words."""
+    mastered_word_s = get_mastered_word_store()
+    for word in req.words:
+        mastered_word_s.remove(word)
+    response.status_code = status.HTTP_204_NO_CONTENT
+
+
+@app.get("/api/word_samples/export/")
+def export_words():
+    """Export all the word samples."""
+    fp = StringIO()
+    VocCSVWriter().write_to(fp)
+    fp.seek(0)
+
+    now = datetime.datetime.now()
+    filename = now.strftime("ai_vov_words_%Y%m%d_%H%M.csv")
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    return StreamingResponse(fp, headers=headers)
 
 
 def validate_result_word(word: WordSample, orig_text: str):
     """Check if a result word is valid before it can be put into vocabulary book"""
     if get_word_store().exists(word.word):
-        raise WordInvalidForAdding('already in your vocabulary book')
-    if get_mastered_word_store().exists(word.word):
-        raise WordInvalidForAdding('already mastered')
-    if word.word not in orig_text.lower():
-        raise WordInvalidForAdding('not in the original text')
+        raise error_codes.WORD_ALREADY_EXISTS.set_data(word.word)

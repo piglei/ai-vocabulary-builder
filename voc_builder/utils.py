@@ -1,27 +1,175 @@
 """Basic utils for string and other simple types"""
 
 import re
-from typing import Sequence, Set
+from typing import List, Optional, Set
 
 
 def tokenize_text(text: str) -> Set[str]:
     """Return all words in the given text, words are in lower case"""
-    return {s.group().lower() for s in re.finditer(r'[a-zA-Z-]+', text)}
+    return {s.group().lower() for s in re.finditer(r"[a-zA-Z-]+", text)}
 
 
-def highlight_words(text: str, words: Sequence[str], extra_style: str = '') -> str:
-    """Find all occurrences of the given words in text, make them highlighted"""
-    pattern = r'\b({})\b'.format('|'.join(words))
-    tag_start, tag_end = '[bold][underline]', '[/underline][/bold]'
-    if extra_style:
-        tag_start = f'{tag_start}[{extra_style}]'
-        tag_end = f'[/{extra_style}]{tag_end}'
-    return re.sub(pattern, rf'{tag_start}\1{tag_end}', text, flags=re.IGNORECASE)
+def get_word_candidates(text: str, known_words: Optional[Set[str]] = None) -> List[str]:
+    """Get words that are candidates for vocabulary building in the given text.
 
-
-def highlight_story_text(text: str) -> str:
-    """Find all special words in the story text, make them highlighted.
-    All special words are in this format: "${...}$"
+    :param text: The text to extract words from
+    :param known_words: Words that are already known and should be ignored
     """
-    pattern = r'\${?([\w-]*?)}?\$'
-    return re.sub(pattern, r'[bold][underline]\1[/underline][/bold]', text, flags=re.IGNORECASE)
+    words = [s.group() for s in re.finditer(r"[a-zA-Z-]+", text)]
+    words = [w for w in words if w.lower() not in easy_words and len(w) > 1]
+    # Ignore known words, case insensitive
+    if known_words:
+        known_words = {w.lower() for w in known_words}
+        words = [w for w in words if w.lower() not in known_words]
+    return words
+
+
+# Easy words that are not considered as candidates when building vocabulary
+easy_words = {
+    "is",
+    "are",
+    "a",
+    "able",
+    "about",
+    "after",
+    "all",
+    "also",
+    "an",
+    "and",
+    "any",
+    "as",
+    "ask",
+    "at",
+    "back",
+    "bad",
+    "be",
+    "because",
+    "big",
+    "but",
+    "by",
+    "call",
+    "can",
+    "case",
+    "child",
+    "come",
+    "company",
+    "could",
+    "day",
+    "different",
+    "do",
+    "early",
+    "even",
+    "eye",
+    "feel",
+    "few",
+    "find",
+    "first",
+    "for",
+    "from",
+    "get",
+    "give",
+    "go",
+    "good",
+    "great",
+    "hand",
+    "have",
+    "he",
+    "her",
+    "high",
+    "him",
+    "his",
+    "how",
+    "i",
+    "if",
+    "important",
+    "in",
+    "into",
+    "it",
+    "its",
+    "just",
+    "know",
+    "large",
+    "last",
+    "leave",
+    "life",
+    "like",
+    "little",
+    "long",
+    "look",
+    "make",
+    "man",
+    "me",
+    "most",
+    "my",
+    "new",
+    "next",
+    "no",
+    "not",
+    "now",
+    "number",
+    "of",
+    "old",
+    "on",
+    "one",
+    "only",
+    "or",
+    "other",
+    "our",
+    "out",
+    "over",
+    "own",
+    "part",
+    "person",
+    "place",
+    "point",
+    "public",
+    "right",
+    "same",
+    "say",
+    "see",
+    "seem",
+    "she",
+    "small",
+    "so",
+    "some",
+    "take",
+    "tell",
+    "than",
+    "that",
+    "the",
+    "their",
+    "them",
+    "then",
+    "there",
+    "these",
+    "they",
+    "thing",
+    "think",
+    "this",
+    "time",
+    "to",
+    "try",
+    "two",
+    "up",
+    "us",
+    "use",
+    "want",
+    "way",
+    "we",
+    "week",
+    "well",
+    "what",
+    "when",
+    "which",
+    "who",
+    "will",
+    "with",
+    "woman",
+    "work",
+    "world",
+    "would",
+    "year",
+    "you",
+    "young",
+    "your",
+}

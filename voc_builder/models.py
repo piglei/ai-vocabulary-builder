@@ -1,79 +1,82 @@
+import re
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
+
+RE_PART_OF_SPEECH = re.compile(r"^\[([a-zA-Z]+)\]")
+
+
+@dataclass
+class WordDefinition:
+    """A word definition"""
+
+    part_of_speech: str
+    definition: str
+
+    @classmethod
+    def from_text(cls, text: str) -> "WordDefinition":
+        """Create a WordDefinition object from text like "[noun] ..."."""
+        if m := RE_PART_OF_SPEECH.search(text):
+            part_of_speech = m.group(1)
+            definition = text[m.end() :].strip()
+            return cls(part_of_speech, definition)
+        return cls("", text)
 
 
 @dataclass
 class WordSample:
-    """A word sample which is ready to be added into a vocabulary book
+    """A word sample which is ready to be added into the vocabulary book.
 
     :param word: The word itself, for example: "world"
     :param word_normal: The normal form of the given word, `None` means unknown
-    :param word_meaning: The Chinese meaning of the word
     :param pronunciation: The pronunciation of the word, "/wɔrld/"
+    :param definitions: The word's definitions
     :param orig_text: The original text
     :param translated_text: The translated text
     """
 
     word: str
     word_normal: Optional[str]
-    word_meaning: str
     pronunciation: str
+    definitions: List[str]
     orig_text: str
     translated_text: str
 
     @classmethod
-    def make_empty(cls, word: str) -> 'WordSample':
+    def make_empty(cls, word: str) -> "WordSample":
         """Make an empty object which use "word" field only, other fields are set to empty."""
-        return cls(word, word, '', '', '', '')
+        return cls(word, word, "", [], "", "")
 
-    def get_word_meaning_display(self) -> str:
-        """Get the word_meaning field for display purpose, will add extra info"""
+    def get_definitions_str(self) -> str:
+        """Get the definitions as a single string."""
+        defs = "; ".join(d.definition for d in self.get_structured_definitions())
         if self.word_normal and self.word_normal != self.word:
-            return f"{self.word_meaning}（原词：{self.word_normal}）"
-        return self.word_meaning
+            return f"{defs}（原词：{self.word_normal}）"
+        return defs
 
-    def get_normal_word_display(self) -> str:
-        """Try to display current word with the normal form comes first"""
-        if self.word_normal and self.word_normal != self.word:
-            return f'{self.word_normal}({self.word})'
-        return self.word
+    def get_structured_definitions(self) -> List[WordDefinition]:
+        """Get the structured definitions."""
+        return [WordDefinition.from_text(d) for d in self.definitions]
 
 
 @dataclass
 class WordChoice:
-    """A word for choice
+    """A word for choice.
 
     :param word: The word itself, for example: "world"
     :param word_normal: The normal form of the given word
-    :param word_meaning: The Chinese meaning of the word
     :param pronunciation: The pronunciation of the word, "/wɔrld/"
+    :param definitions: The definitions of the word
     """
 
     word: str
     word_normal: str
-    word_meaning: str
     pronunciation: str
-
-    def get_console_display(self) -> str:
-        """A more detailed format"""
-        if self.word == self.word_normal:
-            return f'{self.word} / {self.pronunciation.strip("/")} / {self.word_meaning}'
-        else:
-            return f'{self.word} / （原词：{self.word_normal}） / {self.pronunciation.strip("/")} / {self.word_meaning}'
-
-    @classmethod
-    def extract_word(cls, s: str) -> str:
-        """Extract the word from the console display
-
-        :param s: A detailed representation of WordChoice object
-        :return: The word string
-        """
-        return s.split(' / ')[0]
+    definitions: List[str]
 
 
 @dataclass
 class WordProgress:
-    """Store the learning progress of a word
+    """Store the learning progress of a word.
 
     :param word: The word itself, for example: "world"
     :param quiz_cnt: The count of being used for quiz
@@ -90,36 +93,36 @@ class WordProgress:
 
 
 @dataclass
-class TranslationResult:
-    """The result of a successful translation
+class OpenAIConfig:
+    """The configuration of OpenAI service."""
 
-    :param text: The original text.
-    :param translated_text: The translated text.
-    """
-
-    text: str
-    translated_text: str
+    api_key: str
+    api_host: str
+    model: str
 
 
 @dataclass
-class LiveTranslationInfo:
-    """A live info represents an ongoing translation
+class GeminiConfig:
+    """The configuration of Gemini service."""
 
-    :param translated_text: Text being translated
-    :param is_finished: Whether the translation is finished
-    """
-
-    translated_text: str = ''
-    is_finished: bool = False
+    api_key: str
+    api_host: str
+    model: str
 
 
 @dataclass
-class LiveStoryInfo:
-    """A live info represents an ongoing story writing
+class SystemSettings:
+    """The system settings for the project."""
 
-    :param story_text: Current story content
-    :param is_finished: Whether the story writing is finished
-    """
+    model_provider: str
+    openai_config: OpenAIConfig
+    gemini_config: GeminiConfig
 
-    story_text: str = ''
-    is_finished: bool = False
+
+def build_default_settings() -> SystemSettings:
+    """Build the default system settings, all fields are using the default value."""
+    return SystemSettings(
+        model_provider="",
+        openai_config=OpenAIConfig(api_key="", api_host="", model=""),
+        gemini_config=GeminiConfig(api_key="", api_host="", model=""),
+    )

@@ -8,9 +8,16 @@ from voc_builder.models import WordSample
 def setup_config(tmp_path):
     """Set up configs, change the path of databases and book so no one get hurt."""
     config.DEFAULT_DB_PATH = tmp_path
-    config.DEFAULT_CSV_FILE_PATH = tmp_path / 'foo.csv'
+    config.DEFAULT_CSV_FILE_PATH = tmp_path / "foo.csv"
 
 
 @pytest.fixture
 def w_sample_world() -> WordSample:
-    return WordSample('world', 'world', '世界', 'wɔrld', 'Hello, world!', '你好，世界！')
+    return WordSample(
+        "world",
+        "world",
+        definitions=["世界"],
+        pronunciation="wɔrld",
+        orig_text="Hello, world!",
+        translated_text="你好，世界！",
+    )

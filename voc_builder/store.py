@@ -7,11 +7,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set
 
+import cattrs
 import pendulum
 from tinydb import Query, TinyDB
 
 from voc_builder import config
-from voc_builder.models import WordProgress, WordSample
+from voc_builder.models import SystemSettings, WordProgress, WordSample
 
 
 class MasteredWordStore:
@@ -36,7 +37,7 @@ class MasteredWordStore:
 
         :return: List of words.
         """
-        return [d['word'] for d in self._db.all()]
+        return [d["word"] for d in self._db.all()]
 
     def add(self, word: str):
         """Mark a word as mastered
@@ -44,7 +45,7 @@ class MasteredWordStore:
         :param word: Lower cased word.
         """
         MWord = Query()
-        return self._db.upsert({'word': word}, MWord.word == word)
+        return self._db.upsert({"word": word}, MWord.word == word)
 
     def remove(self, word: str):
         """Remove a word
@@ -79,7 +80,9 @@ class WordDetailedObj:
     @property
     def date_added(self) -> str:
         """Return a well formatted date added string for display"""
-        return datetime.datetime.fromtimestamp(self.ts_date_added).strftime('%Y-%m-%d %H:%M')
+        return datetime.datetime.fromtimestamp(self.ts_date_added).strftime(
+            "%Y-%m-%d %H:%M"
+        )
 
     @property
     def date_added_diff_for_humans(self) -> str:
@@ -104,7 +107,8 @@ class WordStore:
         :return: A list of words
         """
         all_words = sorted(
-            self.all(), key=lambda obj: (obj.wp.ts_date_storied or 0, obj.ts_date_added or 0)
+            self.all(),
+            key=lambda obj: (obj.wp.ts_date_storied or 0, obj.ts_date_added or 0),
         )
         # Randomize the result by picking from a slightly lager range
         results = all_words[: math.ceil(1.5 * count)]
@@ -126,7 +130,7 @@ class WordStore:
             wp.storied_cnt += 1
             wp.ts_date_storied = time.time()
             self._db.update(
-                {'wp': asdict(wp)},
+                {"wp": asdict(wp)},
                 Word.ws.word == obj.ws.word,
             )
 
@@ -157,9 +161,11 @@ class WordStore:
         Word = Query()
         return self._db.upsert(
             {
-                'ws': asdict(word),
-                'wp': asdict(WordProgress(word=word.word)),
-                'ts_date_added': ts_date_added if ts_date_added is not None else time.time(),
+                "ws": asdict(word),
+                "wp": asdict(WordProgress(word=word.word)),
+                "ts_date_added": ts_date_added
+                if ts_date_added is not None
+                else time.time(),
             },
             Word.ws.word == word.word,
         )
@@ -188,7 +194,9 @@ class WordStore:
         for d in self._db.all():
             yield self._to_detailed_obj(d)
 
-    def search(self, keyword: str, order_by: str = 'date_added') -> Iterable[WordDetailedObj]:
+    def search(
+        self, keyword: str, order_by: str = "date_added"
+    ) -> Iterable[WordDetailedObj]:
         """Search for words by keyword
 
         :param keyword: The search keyword, part of a word.
@@ -221,11 +229,17 @@ class WordStore:
     def _to_detailed_obj(d: Dict) -> WordDetailedObj:
         """Turn raw JSON data into WordDetailedObj object."""
         # Handle data <= 0.2.0 version
-        d['ws'].setdefault('word_normal', None)
-        return WordDetailedObj(
-            ws=WordSample(**d['ws']),
-            wp=WordProgress(**d['wp']),
-            ts_date_added=d['ts_date_added'],
+        d["ws"].setdefault("word_normal", None)
+        # Handle data in legacy versions that doesn't have definitions
+        if "definitions" not in d["ws"]:
+            if legacy_def := d["ws"].get("word_meaning", ""):
+                d["ws"]["definitions"] = [legacy_def]
+            else:
+                d["ws"]["definitions"] = []
+
+        return cattrs.structure(
+            {"ws": d["ws"], "wp": d["wp"], "ts_date_added": d["ts_date_added"]},
+            WordDetailedObj,
         )
 
 
@@ -235,10 +249,12 @@ class InternalState:
 
     :param name: Use a fixed value by default.
     :param last_ver_checking_ts: The last time when a version checking is performed, in Unix timestamp.
+    :param latest_version: The latest version returned last time.
     """
 
     name: str
     last_ver_checking_ts: float
+    server_latest_version: Optional[str] = None
 
 
 class InternalStateStore:
@@ -247,30 +263,60 @@ class InternalStateStore:
     :param file_path: The file path which stores data.
     """
 
-    name_default = 'default'
+    name_default = "default"
 
     def __init__(self, file_path: Path):
         self.file_path = file_path
         self._db = TinyDB(self.file_path)
 
-    def set_last_ver_checking_ts(self):
-        """Update the last version checking time, set to current."""
+    def set_internal_state(self, state: InternalState):
+        """Update the internal state."""
+        State = Query()
+        return self._db.upsert(
+            cattrs.unstructure(state), State.name == self.name_default
+        )
+
+    def get_internal_state(self) -> InternalState:
+        """Get the internal state."""
+        State = Query()
+        objs = self._db.search(State.name == self.name_default)
+        if not objs:
+            return InternalState(name=self.name_default, last_ver_checking_ts=-1)
+        return cattrs.structure(objs[0], InternalState)
+
+
+class SystemSettingsStore:
+    """Stores the system settings of the tool itself.
+
+    :param file_path: The file path which stores data.
+    """
+
+    name_default = "default"
+
+    def __init__(self, file_path: Path):
+        self.file_path = file_path
+        self._db = TinyDB(self.file_path)
+
+    def set_system_settings(self, settings: SystemSettings):
+        """Set the system settings."""
         State = Query()
         return self._db.upsert(
             {
-                'name': self.name_default,
-                'last_ver_checking_ts': time.time(),
+                "name": self.name_default,
+                "system_settings": cattrs.unstructure(settings),
             },
             State.name == self.name_default,
         )
 
-    def get_last_ver_checking_ts(self) -> Optional[float]:
-        """Get the last version checking time"""
+    def get_system_settings(self) -> Optional[SystemSettings]:
+        """Get the system settings."""
         State = Query()
         objs = self._db.search(State.name == self.name_default)
         if not objs:
             return None
-        return InternalState(**objs[0]).last_ver_checking_ts
+
+        d = objs[0].get("system_settings", {})
+        return cattrs.structure(d, SystemSettings)
 
 
 # Database related functions
@@ -288,16 +334,22 @@ def initialized_db():
 def get_mastered_word_store() -> MasteredWordStore:
     if not _db_initialized:
         initialized_db()
-    return MasteredWordStore(config.DEFAULT_DB_PATH / 'mastered_word.json')
+    return MasteredWordStore(config.DEFAULT_DB_PATH / "mastered_word.json")
 
 
 def get_word_store() -> WordStore:
     if not _db_initialized:
         initialized_db()
-    return WordStore(config.DEFAULT_DB_PATH / 'word.json')
+    return WordStore(config.DEFAULT_DB_PATH / "word.json")
 
 
 def get_internal_state_store() -> InternalStateStore:
     if not _db_initialized:
         initialized_db()
-    return InternalStateStore(config.DEFAULT_DB_PATH / 'internal.json')
+    return InternalStateStore(config.DEFAULT_DB_PATH / "internal.json")
+
+
+def get_sys_settings_store() -> SystemSettingsStore:
+    if not _db_initialized:
+        initialized_db()
+    return SystemSettingsStore(config.DEFAULT_DB_PATH / "settings.json")
