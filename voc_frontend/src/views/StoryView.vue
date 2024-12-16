@@ -22,15 +22,15 @@ function writeStory() {
     
     source.addEventListener('story_partial', (event) => {
         story.value = event.data
-        // const parsedData = JSON.parse(event.data)
     })
     
+    // Story is done
     source.addEventListener('story', (event) => {
         story.value = event.data
         writingStatus.value = JobStatus.Done
     })
     
-    // Translation finished, set the text and start extracting
+    // Words used for this story received
     source.addEventListener('words', (event) => {
         const parsedData = JSON.parse(event.data)
         words.length = 0
@@ -51,6 +51,7 @@ function writeStory() {
     }
 }
 
+// Replace the special word markers with HTML tags.
 const richStory = computed(() => {
     return story.value.replace(/\$(\w+)?\$/g, '<span class="word"><mark>$1</mark></span>')
 })
@@ -121,15 +122,16 @@ onUpdated(() => {
     </div>
 </template>
 
-<style>
+<style type="text/scss">
 #story {
     background-color: #f3f3f3;
     padding: 26px 16px;
     font-size: 16px;
     line-height: 28px;
-}
-#story .word {
-    font-weight: bold;
+
+    .word {
+        font-weight: bold;
+    }
 }
 .word-cards {
     display: flex;
@@ -140,12 +142,14 @@ onUpdated(() => {
     width: calc(25% - 10px);
     box-sizing: border-box;
     margin-bottom: 10px;
-}
-.word-card i {
-    font-size: 12px;
-    cursor: pointer;
-}
-.word-card .card-text {
-    font-size: 13px;
+
+    .card-text {
+        font-size: 13px;
+    }
+
+    i {
+        font-size: 12px;
+        cursor: pointer;
+    }
 }
 </style>

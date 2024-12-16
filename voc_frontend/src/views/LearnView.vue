@@ -19,7 +19,8 @@ onMounted(() => {
 
 onUpdated(() => {
 	nextTick(() => {
-		tippy('.action-panel *[data-tippy-content]', {delay: 100})
+		tippy('.action-panel i[data-tippy-content]', {delay: 100})
+		tippy('.word-extra-info span[data-tippy-content]', {delay: 100})
 	})
 })
 
@@ -42,7 +43,6 @@ async function getWords() {
 }
 
 // Remove a word
-// TODO: Add confirmation
 async function removeWord(word) {
 	try {
 		await axios.post(window.API_ENDPOINT + '/api/word_samples/deletion/', {words: [word]})
@@ -55,7 +55,6 @@ async function removeWord(word) {
 	// Remove it from local memory
 	words.value = words.value.filter((obj) => obj.ws.word !== word)
 	count.value = words.value.length
-	notyf.success(`<strong>${word}</strong> has been removed.`)
 }
 
 // Method to handle export
@@ -68,9 +67,9 @@ function exportWords() {
 <template>
 	<div>
 		<div class="row mt-4">
-				<div class="col-12">
-						<LearnNav activePanel="words" />                
-				</div>
+			<div class="col-12">
+				<LearnNav activePanel="words" />                
+			</div>
 		</div>
 		<div class="row">
 			<div class="col-12">
@@ -83,18 +82,11 @@ function exportWords() {
 					</div>
 					<table class="table table-striped words-list mt-3" v-if="words.length > 0">
 						<colgroup>
-							<col span="1" style="width: 120px" />
+							<col span="1" style="width: 140px" />
 							<col span="1" />
 							<col span="1" />
 						</colgroup>
 						
-						<thead>
-							<tr>
-								<th scope="col">Word</th>
-								<th scope="col">Definition</th>
-								<th scope="col">Example sentence / Translation</th>
-							</tr>
-						</thead>
 						<tbody>
 							<tr v-for="word of words" :key="word.ws.word" class="word-row">
 								<td>
@@ -113,11 +105,12 @@ function exportWords() {
 								<td>
 									<p class="mb-2">{{ word.ws.orig_text }}</p>
 									<p class="text-secondary mt-1 mb-1">{{ word.ws.translated_text }}</p>
-
+									<p class="word-extra-info text-secondary mt-2">
+										<i class="bi bi-calendar"></i>
+										<span class="ms-2" :data-tippy-content="word.dateAdded.toISO()">Added {{ word.dateAdded.toRelativeCalendar() }}</span>
+									</p>
+									
 									<div class="action-panel">
-										<span class="word-extra-info text-secondary me-3" :data-tippy-content="word.dateAdded.toISO()">
-											Added {{ word.dateAdded.toRelativeCalendar() }}
-										</span>
 										<a href="javascript:void(0)" @click="removeWord(word.ws.word)">
 											<i class="bi bi-trash" data-tippy-content="Remove"></i>
 										</a>
@@ -133,19 +126,33 @@ function exportWords() {
 	</div>
 </template>
 
-<style>
+<style type="text/scss">
 .words-list {
 	font-size: 14px;
-}
-.words-list .word {
-	font-size: 15px;
-	font-weight: 500;
-}
-.words-list .proun {
-	font-size: 13px;
-}
-.words-list p.definition {
-	margin-bottom: 2px;
+	.word {
+		font-size: 18px;
+		font-weight: 500;
+	}
+	.proun {
+		font-size: 13px;
+	}
+	p.definition {
+		margin-bottom: 2px;
+	}
+	.word-extra-info {
+		font-size: 13px;
+		margin-bottom: 0;
+	}
+	td {
+		padding-top: 13px;
+		padding-bottom: 13px;
+	}
+	td:first-child {
+		padding-left: 24px;
+	}
+	td:last-child {
+		padding-right: 24px;
+	}
 }
 .word-row {
 	position: relative;
@@ -164,11 +171,9 @@ function exportWords() {
 	padding: 5px 14px;
 	background-color: white;
 	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-.action-panel .word-extra-info {
-	font-size: 13px;
-}
-.action-panel i {
-	cursor: pointer;
+	
+	i {
+		cursor: pointer;
+	}
 }
 </style>

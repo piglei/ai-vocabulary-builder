@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import axios from 'axios'
 
-import { reactive, onUpdated, nextTick, onMounted } from 'vue';
-import tippy from 'tippy.js';
+import { reactive, onMounted } from 'vue';
 import LearnNav from '@/components/LearnNav.vue'
 import { notyf } from '@/common/ui';
 
 const masteredWords = reactive([])
 
+// Get mastered words from the server
 async function getMasteredWords() {
 	try {
 		const response = await axios.get(window.API_ENDPOINT + '/api/mastered_words/')
@@ -21,6 +21,7 @@ async function getMasteredWords() {
 	}
 }
 
+// Delete a mastered word
 async function deleteMasteredWord(word) {
     try {
         await axios.post(window.API_ENDPOINT + '/api/mastered_words/deletion/', { words: [word]})
@@ -40,12 +41,6 @@ onMounted(() => {
     getMasteredWords()
 })
 
-// Enable tippy instances for elements.
-onUpdated(() => {
-    nextTick(() => {
-        tippy('i.word-card-info-icon[data-tippy-content]', {delay: 100})
-    })
-})
 </script>
 
 <template>
@@ -82,7 +77,7 @@ onUpdated(() => {
     </div>
 </template>
 
-<style>
+<style type="text/scss">
 .word-cards {
     display: flex;
     flex-wrap: wrap;
