@@ -673,7 +673,7 @@ onUpdated(() => {
 </template>
 
 
-<style type="texst/scss" scoped>
+<style lang="scss" scoped>
 .trans-ret .card-text {
 	height: 140px;
 	overflow-y: auto;

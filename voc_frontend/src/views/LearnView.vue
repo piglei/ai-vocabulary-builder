@@ -126,7 +126,7 @@ function exportWords() {
 	</div>
 </template>
 
-<style type="text/scss">
+<style lang="scss">
 .words-list {
 	font-size: 14px;
 	.word {

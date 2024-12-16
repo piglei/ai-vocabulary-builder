@@ -77,7 +77,7 @@ onMounted(() => {
     </div>
 </template>
 
-<style type="text/scss">
+<style lang="scss">
 .word-cards {
     display: flex;
     flex-wrap: wrap;

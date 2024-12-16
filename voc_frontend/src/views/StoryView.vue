@@ -122,7 +122,7 @@ onUpdated(() => {
     </div>
 </template>
 
-<style type="text/scss">
+<style lang="scss">
 #story {
     background-color: #f3f3f3;
     padding: 26px 16px;
