@@ -249,10 +249,12 @@ class InternalState:
 
     :param name: Use a fixed value by default.
     :param last_ver_checking_ts: The last time when a version checking is performed, in Unix timestamp.
+    :param latest_version: The latest version returned last time.
     """
 
     name: str
     last_ver_checking_ts: float
+    server_latest_version: Optional[str] = None
 
 
 class InternalStateStore:
@@ -267,24 +269,20 @@ class InternalStateStore:
         self.file_path = file_path
         self._db = TinyDB(self.file_path)
 
-    def set_last_ver_checking_ts(self):
-        """Update the last version checking time, set to current."""
+    def set_internal_state(self, state: InternalState):
+        """Update the internal state."""
         State = Query()
         return self._db.upsert(
-            {
-                "name": self.name_default,
-                "last_ver_checking_ts": time.time(),
-            },
-            State.name == self.name_default,
+            cattrs.unstructure(state), State.name == self.name_default
         )
 
-    def get_last_ver_checking_ts(self) -> Optional[float]:
-        """Get the last version checking time"""
+    def get_internal_state(self) -> InternalState:
+        """Get the internal state."""
         State = Query()
         objs = self._db.search(State.name == self.name_default)
         if not objs:
-            return None
-        return cattrs.structure(objs[0], InternalState).last_ver_checking_ts
+            return InternalState(name=self.name_default, last_ver_checking_ts=-1)
+        return cattrs.structure(objs[0], InternalState)
 
 
 class SystemSettingsStore:

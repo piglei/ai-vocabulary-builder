@@ -74,6 +74,24 @@ function toggleAddExtraMode() {
 	addExtraMode.value = !addExtraMode.value
 }
 
+const systemStatus = reactive({
+	model_settings_initialized: true,
+	version: '',
+	new_version: null,
+})
+
+// Get the system status
+async function getSystemStatus() {
+	try {
+		const response = await axios.get(window.API_ENDPOINT + '/api/system_status')
+		const data = response.data
+		Object.assign(systemStatus, data)
+	} catch (error) {
+		const msg = error.response ? error.response.data.message : error.message
+		notyf.error('Failed to load system status, details: ' + msg)
+	}
+}
+
 // Translate the user input text and extract word from it
 function extractWord() {
 	resetStatuses()
@@ -280,6 +298,9 @@ function handleKeyPress(event: KeyboardEvent) {
 
 // If the text param was provided by URL, start the extracting process right away
 onMounted(() => {
+	// Get system status
+	getSystemStatus()
+
 	const urlParams = new URLSearchParams(window.location.search)
 	const textParam = urlParams.get('text')
 	if (textParam) {
@@ -431,7 +452,7 @@ onUpdated(() => {
 				<button
 					type="button"
 					class="btn btn-primary"
-					:class="{ disabled: anyInProgress }"
+					:class="{ disabled: anyInProgress || !systemStatus.model_settings_initialized }"
 					@click="extractWord()"
 				>
 					<i class="bi bi-hammer"></i>
@@ -510,6 +531,11 @@ onUpdated(() => {
 
 	<div class="row mt-5">
 		<div class="col-12" v-if="!transHasStarted">
+			<div v-if="!systemStatus.model_settings_initialized" class="alert alert-danger mt-2" role="alert">
+				<i class="bi bi-wrench-adjustable-circle"></i>
+				The model settings has not been initialized. Please <router-link to="/app/settings">configure</router-link> it first.
+			</div>
+
 			<div class="card tips-placeholder">
 				<div class="card-body">
 					<p>✨ Harness the power of AI to build your personalized vocabulary list! -- Tips: </p>
@@ -524,6 +550,17 @@ onUpdated(() => {
 						</a>
 					</li>
 					</ul>
+
+					<div class="version-info" v-if="systemStatus.version">
+						Version: {{ systemStatus.version }}
+						<a 
+							class="text-primary"
+							v-if="systemStatus.new_version"
+							href="https://github.com/piglei/ai-vocabulary-builder"
+							target="_blank">
+							&lt;⬆️ Upgrade to {{ systemStatus.new_version  }}&gt;
+					    </a>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -732,6 +769,12 @@ onUpdated(() => {
 
 	ul {
 		margin-bottom: 0;
+	}
+
+	.version-info {
+		margin-top: 2em;
+		font-size: 13px;
+		color: #999;
 	}
 }
 

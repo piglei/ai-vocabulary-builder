@@ -16,6 +16,7 @@ from sse_starlette.sse import EventSourceResponse
 from starlette.responses import FileResponse, StreamingResponse
 from typing_extensions import Annotated
 
+import voc_builder
 from voc_builder.ai_svc import (
     get_rare_word,
     get_story,
@@ -37,6 +38,7 @@ from voc_builder.store import (
     get_word_store,
 )
 from voc_builder.utils import tokenize_text
+from voc_builder.version import get_new_version
 
 from .errors import (
     api_error_exception_handler,
@@ -227,6 +229,25 @@ async def manually_save(req: ManuallySelectInput, response: Response):
         "word_sample": WordSampleOutput.from_db_obj(word_sample),
         "count": word_store.count(),
     }
+
+
+@app.get("/api/system_status")
+async def get_system_status(response: Response):
+    """Get the system status."""
+    settings = get_sys_settings_store().get_system_settings()
+    model_settings_initialized = bool(settings and settings.model_provider)
+    try:
+        new_version = get_new_version()
+    except Exception:
+        logger.exception("Error checking new version.")
+        new_version = None
+    return JSONResponse(
+        {
+            "version": voc_builder.__version__,
+            "model_settings_initialized": model_settings_initialized,
+            "new_version": new_version,
+        }
+    )
 
 
 @app.get("/api/settings")

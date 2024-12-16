@@ -1759,6 +1759,30 @@ url = "https://mirrors.tencent.com/pypi/simple"
 reference = "tencent-mirror"
 
 [[package]]
+name = "unearth"
+version = "0.17.2"
+description = "A utility to fetch and download python packages"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "unearth-0.17.2-py3-none-any.whl", hash = "sha256:4d21af1238a583835fca156322f7225382e718cdcc42d6278050a88e605c4ad5"},
+    {file = "unearth-0.17.2.tar.gz", hash = "sha256:0b8a2afd3476f1ab6155fc579501ac47fffe43547d88a70e5a5b76a7fe6caa2c"},
+]
+
+[package.dependencies]
+httpx = ">=0.27.0,<1"
+packaging = ">=20"
+
+[package.extras]
+keyring = ["keyring"]
+legacy = ["requests (>=2.25)"]
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
 name = "urllib3"
 version = "2.2.3"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
@@ -2026,4 +2050,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "9e2f4d84bd3ef126e7e0285770abd80f8876e572cb3b8c1cd1b551b059aaf948"
+content-hash = "38adc2a9cdfa779470f8b00a5f63812b6f69407d300a01a08c437b923d492e7e"

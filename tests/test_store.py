@@ -145,20 +145,16 @@ class TestDifferentWordVersion:
 
 
 class TestInternalStateStore:
-    def test_last_ver_checking(self, tmp_path):
+    def test_state(self, tmp_path):
         state_store = InternalStateStore(tmp_path / "foo.json")
-        assert state_store.get_last_ver_checking_ts() is None
+        state = state_store.get_internal_state()
+        assert state is not None
+        assert state.last_ver_checking_ts == -1
 
-        # Update the "last_ver_checking_ts" field twice, test that the values are in ascending order.
-        state_store.set_last_ver_checking_ts()
-        ts = state_store.get_last_ver_checking_ts()
-        assert ts
-        assert isinstance(ts, float)
-
-        state_store.set_last_ver_checking_ts()
-        new_ts = state_store.get_last_ver_checking_ts()
-        assert new_ts
-        assert new_ts > ts
+        state.last_ver_checking_ts = time.time()
+        state_store.set_internal_state(state)
+        state = state_store.get_internal_state()
+        assert state.last_ver_checking_ts > 0
 
 
 class TestSysSettingsStore:
