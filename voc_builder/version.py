@@ -27,16 +27,21 @@ VERSION_CHECKING_INTERVAL = 3600 * 8
 
 def get_new_version() -> Optional[str]:
     """Check if there's a new versions available."""
+    current = __version__
     state_store = get_internal_state_store()
     state = state_store.get_internal_state()
     if time.time() - state.last_ver_checking_ts < VERSION_CHECKING_INTERVAL:
-        return state.server_latest_version
+        latest = state.server_latest_version
+        if not latest:
+            return None
+        if version.parse(current) < version.parse(latest):
+            return latest
+        return None
 
     state.last_ver_checking_ts = time.time()
     state_store.set_internal_state(state)
 
     try:
-        current = __version__
         latest = JohnnyDist(
             PACKAGE_NAME, index_urls=(DEFAULT_INDEX,)
         ).versions_available()[-1]
@@ -48,6 +53,7 @@ def get_new_version() -> Optional[str]:
     state.server_latest_version = latest
     state_store.set_internal_state(state)
 
+    assert latest
     if version.parse(current) < version.parse(latest):
         return latest
     return None
