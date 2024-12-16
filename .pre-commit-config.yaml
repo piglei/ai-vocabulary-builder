@@ -20,7 +20,7 @@ repos:
         types: [python]
         entry: poetry run ruff check --force-exclude --no-cache
       - id: mypy
-        name: run mypy check for "apiserver"
+        name: run mypy check for "voc_builder"
         language: system
         types: [python]
         pass_filenames: false
