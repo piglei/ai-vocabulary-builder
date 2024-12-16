@@ -68,7 +68,7 @@ namespace_packages = true
 exclude = []
 
 [tool.ruff]
-line-length = 119
+line-length = 89
 
 # 每个规则集的具体内容请参考：https://docs.astral.sh/ruff/rules/
 select = [

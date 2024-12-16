@@ -2,17 +2,8 @@
 import 'bootstrap'
 import axios from 'axios'
 
-import { Notyf } from 'notyf'
 import { ref, onMounted, reactive } from 'vue'
-
-const notyf = new Notyf({
-	duration: 4500,
-	dismissible: true,
-	position: {
-		x: 'center',
-		y: 'top'
-	}
-})
+import { notyf } from '@/common/ui';
 
 const settings = reactive({
 	model_provider: "",
@@ -60,7 +51,8 @@ async function loadSettings() {
 		Object.assign(settings, data.settings)
 		Object.assign(modelOptions, data.model_options)
 	} catch (error) {
-		notyf.error('Failed to load settings.')
+		const msg = error.response ? error.response.data.message : error.message
+		notyf.error('Failed to load settings, details: ' + msg)
 	}
 }
 

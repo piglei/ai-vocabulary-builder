@@ -11,9 +11,19 @@ const router = createRouter({
       component: HomeView
     },
     {
-      path: '/manage',
-      name: 'manage',
-      component: () => import('../views/ManageView.vue')
+      path: '/learn',
+      name: 'learn',
+      component: () => import('../views/LearnView.vue')
+    },
+    {
+      path: '/learn/story',
+      name: 'learn_story',
+      component: () => import('../views/StoryView.vue')
+    },
+    {
+      path: '/learn/mastered-words',
+      name: 'learn_mastered_words',
+      component: () => import('../views/MasteredWordsView.vue')
     },
     {
       path: '/settings',

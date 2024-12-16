@@ -1,7 +1,6 @@
 import logging
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-import openai
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 from pydantic_ai import Agent
@@ -10,7 +9,6 @@ from pydantic_ai.models.openai import OpenAIModel
 
 from voc_builder.exceptions import OpenAIServiceError
 from voc_builder.models import (
-    LiveStoryInfo,
     LiveTranslationInfo,
     TranslationResult,
     WordChoice,
@@ -37,7 +35,9 @@ class WordChoiceModelResp(BaseModel):
         self.word = self.word.lower()
 
 
-async def get_translation(text: str, live_info: LiveTranslationInfo) -> TranslationResult:
+async def get_translation(
+    text: str, live_info: LiveTranslationInfo
+) -> TranslationResult:
     """Get the translated content of the given text.
 
     :param text: The text which needs to be translated.
@@ -77,7 +77,9 @@ The paragraph is:
 """
 
 
-async def query_translation(text: str, stream_handler: Optional[StreamHandler] = None) -> str:
+async def query_translation(
+    text: str, stream_handler: Optional[StreamHandler] = None
+) -> str:
     """Query OpenAI to get the translation.
 
     :param stream_handler: A callback function to handle partial replies.
@@ -160,13 +162,17 @@ The paragraph is:
 The word is: {word}"""
 
 
-async def query_get_word_choices(text: str, known_words: Set[str], limit: Optional[int] = 3) -> str:
+async def query_get_word_choices(
+    text: str, known_words: Set[str], limit: Optional[int] = 3
+) -> str:
     """Query OpenAI to get the translation results.
 
     :param limit: The maximum number of words to return, default to 3
     :return: Well formatted string contains word and meaning
     """
-    user_content = prompt_word_choices_user_tmpl.format(text=text, known_words=",".join(known_words))
+    user_content = prompt_word_choices_user_tmpl.format(
+        text=text, known_words=",".join(known_words)
+    )
     prompt = prompt_word_choices_system.format(limit=limit) + "\n" + user_content
     agent = Agent(create_ai_model(), result_type=List[WordChoiceModelResp])
     result = await agent.run(prompt)
@@ -253,63 +259,42 @@ class WordChoicesParser:
 
 # The prompt being used to generate stroy from words
 prompt_write_story_user_tmpl = """\
-Please write a short story which is less than 200 words, the story should use simple words and these special words must be included: {words}. Also surround every special word with a single "$" character at the beginning and the end.
-"""  # noqa: E501
+Please write a short story which is less than {total_words_cnt} words, the story should use simple \
+words and these special words must be included: {words}.  Also surround every special word \
+with a single "$" character at the beginning and the end."""  # noqa: E501
 
 
-def get_story(words: List[WordSample], live_info: LiveStoryInfo) -> str:
+async def get_story(words: List[WordSample]) -> str:
     """Query OpenAI to get a story.
 
     :param live_info: The info object which represents the writing procedure
     :return: The story text
     :raise: OpenAIServiceError
     """
-    _received = ""
-
-    def handle_stream_content(text: str):
-        nonlocal _received
-        _received += text
-        live_info.story_text = _received
-
     # Try to use the normal form of each word
     str_words = [w.word_normal or w.word for w in words]
     try:
-        return query_story(str_words, stream_handler=handle_stream_content)
+        async for message in query_story(str_words):
+            yield message
     except Exception as e:
         raise OpenAIServiceError("Error querying OpenAI API: %s" % e)
-    finally:
-        # Ends the live procedure
-        live_info.is_finished = True
 
 
-def query_story(words: List[str], stream_handler: Optional[StreamHandler] = None) -> str:
+async def query_story(words: List[str]) -> str:
     """Query OpenAI API to get a story.
 
     :param stream_handler: A callback function to handle partial replies.
     :return: The story text
     """
-    content = ""
-
-    # Try to use the normal form of each word
     words_str = ",".join(words)
-    user_content = prompt_write_story_user_tmpl.format(words=words_str)
-    completion = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
-        stream=True,
-        messages=[
-            # Use a single "user" message at this moment because "system" role doesn't perform better
-            {"role": "user", "content": user_content},
-        ],
+    prompt = prompt_write_story_user_tmpl.format(
+        words=words_str, total_words_cnt=len(words) * 30
     )
-    for part in completion:
-        logger.debug("Completion API returns: %s", part)
-        delta = part.choices[0].delta
-        delta_content = delta.get("content")
-        if delta_content:
-            if stream_handler:
-                stream_handler(delta_content)
-            content += delta_content
-    return content
+    agent = Agent(create_ai_model())
+    message = ""
+    async with agent.run_stream(prompt) as result:
+        async for message in result.stream():
+            yield message
 
 
 def create_ai_model():
@@ -323,14 +308,21 @@ def create_ai_model():
 
     if settings.model_provider == "openai":
         openai_config = settings.openai_config
-        client = AsyncOpenAI(api_key=openai_config.api_key, base_url=openai_config.api_host or None)
+        client = AsyncOpenAI(
+            api_key=openai_config.api_key, base_url=openai_config.api_host or None
+        )
         return OpenAIModel(openai_config.model, openai_client=client)
     elif settings.model_provider == "gemini":
         gemini_config = settings.gemini_config
         if gemini_config.api_host:
-            extra_kwargs = {"url_template": str(gemini_config.api_host).rstrip("/") + "/v1beta/models/{model}:"}
+            extra_kwargs = {
+                "url_template": str(gemini_config.api_host).rstrip("/")
+                + "/v1beta/models/{model}:"
+            }
         else:
             extra_kwargs = {}
-        return GeminiModel(gemini_config.model, api_key=gemini_config.api_key, **extra_kwargs)  # type: ignore
+        return GeminiModel(
+            gemini_config.model, api_key=gemini_config.api_key, **extra_kwargs
+        )  # type: ignore
     else:
         raise ValueError("Unknown model provider")
