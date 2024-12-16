@@ -23,7 +23,7 @@ from voc_builder.ai_svc import (
     get_word_manually,
 )
 from voc_builder.constants import GEMINI_MODELS, OPENAI_MODELS, ModelProvider
-from voc_builder.exceptions import AIServiceError, WordInvalidForAdding
+from voc_builder.exceptions import AIServiceError
 from voc_builder.export import VocCSVWriter
 from voc_builder.models import (
     GeminiConfig,
