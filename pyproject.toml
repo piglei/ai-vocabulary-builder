@@ -39,6 +39,7 @@ ruff = "^0.8.3"
 nox = "^2024.10.9"
 pytest = "^8.3.4"
 mypy = "^1.13.0"
+types-requests = "^2.32.0.20241016"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
