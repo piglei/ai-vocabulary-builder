@@ -10,8 +10,11 @@ AI 生词本（“AI Vocabulary Builder” 简称 aivoc）是一个利用了 AI 
 
 产品截图：
 
-↑ Web App “笔记本”模式
+![image](https://github.com/user-attachments/assets/e89dd25b-b637-461e-9b89-fc9c2dc00c56)
 
+↑ 由 AI 智能提取生词
+
+![image](https://github.com/user-attachments/assets/52e4e594-80c0-4e55-99a8-14de51078d30)
 ↑ 测验模式，帮助记忆
 
 ## 快速开始
@@ -27,15 +30,13 @@ pip install ai-vocabulary-builder
 
 ## 使用指南
 
-### 使用 Web App
-
-执行 `aivoc notebook` 命令，使用可交互式 Web App。初次使用应用，需要在 Settings 页面配置 AI 服务。
+执行 `aivoc notebook` 命令，使用可交互式 Web App。初次使用应用，需要在 Settings 页面中配置 AI 服务。
 
 > 当前支持 OpenAI 和 Gemini。
 
 ## 常用配置
 
-本工具的主要配置通用页面完成，此处列举其他由环境变量完成的配置。
+本工具的主要配置项可通过页面来管理，此处仅列举其他由环境变量配置项。
 
 ### AIVOC_DATA_DIR
 
