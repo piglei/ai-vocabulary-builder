@@ -20,6 +20,14 @@ export default {
             </template>
         </li>
         <li class="nav-item">
+            <template v-if="activePanel === 'quiz'">
+                <a class="nav-link active">Quiz</a>
+            </template>
+            <template v-else>
+                <router-link class="nav-link" to="/app/learn/quiz">Quiz</router-link>
+            </template>
+        </li>
+        <li class="nav-item">
             <template v-if="activePanel === 'story'">
                 <a class="nav-link active">Story</a>
             </template>

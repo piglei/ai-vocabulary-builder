@@ -99,7 +99,7 @@ async def get_rare_word(text: str, known_words: Set[str]) -> WordChoice:
     if not words:
         raise AIServiceError("Text does not contain any words that meet the criteria")
 
-    user_content = prompt_rare_word_user_tmpl.format(text=text, words=",".join(words))
+    user_content = prompt_rare_word_user_tmpl.format(text=text, words=", ".join(words))
     prompt = prompt_rare_word_system + user_content
     agent: Agent = Agent(create_ai_model(), result_type=WordChoiceModelResp)
     try:
@@ -173,14 +173,17 @@ async def get_story(words: List[WordSample]) -> AsyncGenerator[str, None]:
         async for message in query_story(str_words):
             yield message
     except Exception as e:
-        raise AIServiceError("Error querying OpenAI API: %s" % e)
+        raise AIServiceError("Error calling AI backend API: %s" % e)
 
 
 # The prompt being used to generate stroy from words
 prompt_write_story_user_tmpl = """\
 Please write a short story which is less than {total_words_cnt} words, the story should use simple \
 words and these special words must be included: {words}.  Also surround every special word \
-with a single "$" character at the beginning and the end."""  # noqa: E501
+with a single "$" character at the beginning and the end.
+
+- Use paragraphs to improve readability.
+"""  # noqa: E501
 
 
 async def query_story(words: List[str]) -> AsyncGenerator[str, None]:

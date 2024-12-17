@@ -203,6 +203,16 @@ def list_word_samples():
     return {"words": words_refined, "count": len(words)}
 
 
+@app.get("/api/word_samples/recent")
+def list_recent_word_samples():
+    """List the most recent word samples in the store."""
+    word_store = get_word_store()
+    words = word_store.list_latest(limit=4)
+    # Remove the fields not necessary, sort by -date_added
+    words_refined = [WordSampleOutput.from_db_obj(obj.ws) for obj in reversed(words)]
+    return {"words": words_refined, "count": len(words)}
+
+
 @app.post("/api/word_samples/manually_save/")
 async def manually_save(req: ManuallySelectInput, response: Response):
     """Manually save a word to the store."""
@@ -231,6 +241,10 @@ async def manually_save(req: ManuallySelectInput, response: Response):
     }
 
 
+MIN_WORDS_STORY = 6
+MIN_WORDS_QUIZ = 5
+
+
 @app.get("/api/system_status")
 async def get_system_status(response: Response):
     """Get the system status."""
@@ -241,11 +255,15 @@ async def get_system_status(response: Response):
     except Exception:
         logger.exception("Error checking new version.")
         new_version = None
+    words_cnt = get_word_store().count()
     return JSONResponse(
         {
             "version": voc_builder.__version__,
             "model_settings_initialized": model_settings_initialized,
             "new_version": new_version,
+            "words_cnt": words_cnt,
+            "story_mode_available": words_cnt >= MIN_WORDS_STORY,
+            "quiz_mode_available": words_cnt >= MIN_WORDS_QUIZ,
         }
     )
 
@@ -284,6 +302,15 @@ async def save_settings(settings_input: SettingsInput, response: Response):
 
     settings_store.set_system_settings(settings)
     return {}
+
+
+@app.get("/api/quiz/words/")
+def get_words_for_quiz(words_num: Annotated[Literal["5", "10", "25", "50"], Query(...)]):
+    """Get words for generating the quiz."""
+    word_store = get_word_store()
+    words = word_store.pick_quiz_words(int(words_num))
+    word_store.update_quiz_words(words)
+    return [WordSampleOutput.from_db_obj(w) for w in words]
 
 
 @app.get("/api/stories/")
