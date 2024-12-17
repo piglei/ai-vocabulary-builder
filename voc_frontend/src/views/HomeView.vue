@@ -8,6 +8,7 @@ import tippy from 'tippy.js';
 import { JobStatus, playWord } from '@/common/basic';
 import { notyf } from '@/common/ui';
 import { exampleSentences, tokenizeText } from '@/common/text';
+import RecentWords from '@/components/RecentWords.vue'
 import 'tippy.js/dist/tippy.css';
 
 // Validation for user input string
@@ -469,6 +470,12 @@ onUpdated(() => {
 	
 	<div class="row mt-4" v-if="!showTextArea">
 		<div class="col-12">
+				<div class="mt-1 mb-2">
+				<a class="reset-link" href="javascript: void(0)" @click="reset"> 
+					<i class="bi bi-box-arrow-left"></i>
+					<span class="ms-2">back</span>
+				</a>
+				</div>
 				<div class="card inputted-text-card">
 					<div class="card-body">
 						<div class="mb-1">
@@ -530,7 +537,11 @@ onUpdated(() => {
 	</div>
 
 	<div class="row mt-5">
+
 		<div class="col-12" v-if="!transHasStarted">
+			<h5>Recently added</h5>
+			<RecentWords />
+
 			<div v-if="!systemStatus.model_settings_initialized" class="alert alert-danger mt-2" role="alert">
 				<i class="bi bi-wrench-adjustable-circle"></i>
 				The model settings has not been initialized. Please <router-link to="/app/settings">configure</router-link> it first.
@@ -683,6 +694,11 @@ onUpdated(() => {
 	color: #666;
 	width: 14px;
 	height: 14px;
+}
+
+.reset-link {
+	text-decoration: none;
+	font-size: 16px;
 }
 
 .extraction-card .card-text {

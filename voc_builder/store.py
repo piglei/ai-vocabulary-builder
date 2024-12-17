@@ -100,6 +100,40 @@ class WordStore:
         self.file_path = file_path
         self._db = TinyDB(self.file_path)
 
+    def pick_quiz_words(self, count: int) -> List[WordSample]:
+        """Pick some words for generating quiz.
+
+        :param count: How many words to pick
+        :return: A list of words
+        """
+        all_words = sorted(
+            self.all(),
+            key=lambda obj: (obj.wp.ts_date_quiz or 0, obj.ts_date_added or 0),
+        )
+        # Randomize the result by picking from a slightly lager range
+        results = all_words[: math.ceil(1.5 * count)]
+        random.shuffle(results)
+        return [obj.ws for obj in results][:count]
+
+    def update_quiz_words(self, words: List[WordSample]):
+        """Update the words being used for making quiz, so later picking won't get the
+        identical results over and over again.
+        """
+        Word = Query()
+        for w in words:
+            obj = self.get(w.word)
+            if not obj:
+                continue
+
+            # Increase the count being storied and update date
+            wp = copy.copy(obj.wp)
+            wp.quiz_cnt += 1
+            wp.ts_date_quiz = time.time()
+            self._db.update(
+                {"wp": asdict(wp)},
+                Word.ws.word == obj.ws.word,
+            )
+
     def pick_story_words(self, count: int = 6) -> List[WordSample]:
         """Pick some words for writing story
 

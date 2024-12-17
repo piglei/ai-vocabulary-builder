@@ -1,15 +1,31 @@
 <script setup lang="ts">
 import { JobStatus } from '@/common/basic';
-import { computed, reactive, ref, onUpdated, nextTick } from 'vue';
+import { computed, reactive, ref, onUpdated, nextTick, onMounted } from 'vue';
 import tippy from 'tippy.js';
 import LearnNav from '@/components/LearnNav.vue'
 import { notyf } from '@/common/ui';
+import axios from 'axios';
 
 const writingStatus = ref(JobStatus.NotStarted)
 const wordsNum = ref(6)
 const story = ref('')
 const words = reactive([])
 
+const modeAvailable = ref(false);
+
+// Get the mode available status from the server
+async function getModeAvailableStatus() {
+    try {
+        const response = await axios.get(window.API_ENDPOINT + '/api/system_status')
+        modeAvailable.value = response.data.story_mode_available
+    } catch (error) {
+        console.log(error)
+    }
+}
+
+onMounted(() => {
+    getModeAvailableStatus()
+})
 
 function writeStory() {
     writingStatus.value = JobStatus.Doing
@@ -38,11 +54,11 @@ function writeStory() {
     })
     
     source.addEventListener('error', (event) => {
-    	if (event.data === undefined) {
-    		return
-    	}
-    	const parsedData = JSON.parse(event.data)
-    	notyf.error(parsedData.message)
+        if (event.data === undefined) {
+            return
+        }
+        const parsedData = JSON.parse(event.data)
+        notyf.error(parsedData.message)
     })
     
     source.onerror = function (event) {
@@ -53,7 +69,9 @@ function writeStory() {
 
 // Replace the special word markers with HTML tags.
 const richStory = computed(() => {
-    return story.value.replace(/\$(\w+)?\$/g, '<span class="word"><mark>$1</mark></span>')
+    return story.value
+        .replace(/\$(\w+)?\$/g, '<span class="word"><mark>$1</mark></span>')
+        .replace(/\n/g, '<br>')
 })
 
 
@@ -80,34 +98,38 @@ onUpdated(() => {
                 
                 <div class="d-flex align-items-center">
                     <button
-                        type="button"
-                        class="btn btn-primary"
-                        id="write-story"
-                        @click="writeStory"
-                        :disabled="writingStatus === JobStatus.Doing"
+                    type="button"
+                    class="btn btn-primary"
+                    id="write-story"
+                    @click="writeStory"
+                    :disabled="writingStatus === JobStatus.Doing || !modeAvailable"
                     >
-                        <i class="bi bi-book"></i>
-                        Write Me a Story
-                    </button>
-                    <span class="ms-4">Use</span>
-                    <select class="form-select ms-2" v-model="wordsNum" style="width: 100px;">
-                        <option value="6">6</option>
-                        <option value="12">12</option>
-                        <option value="24">24</option>
-                    </select>
-                    <span class="ms-2">Words</span>
-                </div>
+                    <i class="bi bi-book"></i>
+                    Write Me a Story
+                </button>
+                <span class="ms-4">Use</span>
+                <select class="form-select ms-2" v-model="wordsNum" style="width: 100px;">
+                    <option value="6">6</option>
+                    <option value="12">12</option>
+                    <option value="24">24</option>
+                </select>
+                <span class="ms-2">Words</span>
             </div>
         </div>
+    </div>
     
-        <div class="row mt-2" v-if="writingStatus !== JobStatus.NotStarted">
-        
-            <div class="cols-12">
-                <hr class="mt-3"/>
+    <div class="row">
+        <div class="cols-12">
+            <hr class="mt-3"/>
+            <div v-if="!modeAvailable" class="alert alert-danger mt-2" role="alert">
+                You don't have enough words yet. Gather some more and come back!
+            </div>
+            <div v-if="writingStatus !== JobStatus.NotStarted">
                 <div id="story" v-html="richStory"></div>
-            
-                <div class="word-cards mt-4">
-                    <div v-for="word of words" class="card border-info mb-3 word-card" :key="word.word">
+                
+                <h5 class="mt-3 mb-1">Words Used</h5>
+                <div class="word-cards mt-2">
+                    <div v-for="word of words" class="card border-info word-card" :key="word.word">
                         <div class="card-body">
                             <h5 class="card-title">
                                 {{ word.word }}
@@ -120,6 +142,7 @@ onUpdated(() => {
             </div>
         </div>
     </div>
+</div>
 </template>
 
 <style lang="scss">
@@ -128,28 +151,34 @@ onUpdated(() => {
     padding: 26px 16px;
     font-size: 16px;
     line-height: 28px;
-
+    
     .word {
         font-weight: bold;
     }
 }
+
 .word-cards {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-}
-.word-card {
-    width: calc(25% - 10px);
-    box-sizing: border-box;
-    margin-bottom: 10px;
 
-    .card-text {
-        font-size: 13px;
-    }
-
-    i {
-        font-size: 12px;
-        cursor: pointer;
+    .word-card {
+        width: calc(25% - 10px);
+        box-sizing: border-box;
+        margin-bottom: 10px;
+        
+        h5 {
+            font-size: 18px;
+            font-weight: normal;
+        }
+        .card-text {
+            font-size: 13px;
+        }
+        
+        i {
+            font-size: 12px;
+            cursor: pointer;
+        }
     }
 }
 </style>

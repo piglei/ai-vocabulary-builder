@@ -17,4 +17,8 @@ def test_tokenize_text():
 
 def test_get_words_candidates():
     s = "Welcome! This is the official documentation for Python."
-    assert get_word_candidates(s) == ["Welcome", "official", "documentation", "Python"]
+    assert get_word_candidates(s, known_words={"python"}) == {
+        "welcome",
+        "official",
+        "documentation",
+    }

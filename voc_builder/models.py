@@ -49,8 +49,6 @@ class WordSample:
     def get_definitions_str(self) -> str:
         """Get the definitions as a single string."""
         defs = "; ".join(d.definition for d in self.get_structured_definitions())
-        if self.word_normal and self.word_normal != self.word:
-            return f"{defs}（原词：{self.word_normal}）"
         return defs
 
     def get_structured_definitions(self) -> List[WordDefinition]:

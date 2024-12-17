@@ -1,7 +1,7 @@
 """Basic utils for string and other simple types"""
 
 import re
-from typing import List, Optional, Set
+from typing import Optional, Set
 
 
 def tokenize_text(text: str) -> Set[str]:
@@ -9,18 +9,18 @@ def tokenize_text(text: str) -> Set[str]:
     return {s.group().lower() for s in re.finditer(r"[a-zA-Z-]+", text)}
 
 
-def get_word_candidates(text: str, known_words: Optional[Set[str]] = None) -> List[str]:
+def get_word_candidates(text: str, known_words: Optional[Set[str]] = None) -> Set[str]:
     """Get words that are candidates for vocabulary building in the given text.
 
     :param text: The text to extract words from
     :param known_words: Words that are already known and should be ignored
     """
-    words = [s.group() for s in re.finditer(r"[a-zA-Z-]+", text)]
-    words = [w for w in words if w.lower() not in easy_words and len(w) > 1]
+    words = tokenize_text(text)
+    words = {w for w in words if w not in easy_words and len(w) > 1}
     # Ignore known words, case insensitive
     if known_words:
         known_words = {w.lower() for w in known_words}
-        words = [w for w in words if w.lower() not in known_words]
+        words = {w for w in words if w not in known_words}
     return words
 
 
