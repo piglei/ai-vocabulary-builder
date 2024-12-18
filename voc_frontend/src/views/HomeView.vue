@@ -5,7 +5,7 @@ import { computed, ref, reactive, onMounted, watch, nextTick, onUpdated, onUnmou
 import { useVuelidate } from '@vuelidate/core'
 import { required, maxLength, minLength } from '@vuelidate/validators'
 import tippy from 'tippy.js';
-import { JobStatus, playWord } from '@/common/basic';
+import { JobStatus } from '@/common/basic';
 import { notyf } from '@/common/ui';
 import { exampleSentences, tokenizeText } from '@/common/text';
 import RecentWords from '@/components/RecentWords.vue'
@@ -274,6 +274,8 @@ function reset() {
 }
 
 function resetStatuses() {
+	disableWordTransition.value = true
+
 	transStatus.value = JobStatus.NotStarted
 	extraStatus.value = JobStatus.NotStarted
 
@@ -284,6 +286,10 @@ function resetStatuses() {
     existingWords.splice(0, existingWords.length)
 
 	forceShowTextArea.value = false
+	
+	nextTick(() => {
+		disableWordTransition.value = false
+	})
 }
 
 // Add event listener for enter key press on the textarea
@@ -636,7 +642,7 @@ onUpdated(() => {
 			<Transition :name="disableWordTransition?'':'moveUpFadeOut'">
 				<WordCardRich v-if="wordSample.word" :wordSample="wordSample" :borderClass="'border-info'" :removeWordFunc="removeWord" />
 			</Transition>
-			<TransitionGroup name="moveUpFadeOut">
+			<TransitionGroup :name="disableWordTransition?'':'moveUpFadeOut'">
 				<WordCardRich v-for="word of addedWords" :key="word.word" :wordSample="word" :removeWordFunc="removeWord" />
 			</TransitionGroup>
 		</div>
