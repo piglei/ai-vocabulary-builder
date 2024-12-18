@@ -6,20 +6,15 @@ from pathlib import Path
 
 from tinydb import Query
 
-from voc_builder import config
-from voc_builder.models import (
-    GeminiConfig,
-    OpenAIConfig,
-    SystemSettings,
-    WordProgress,
-    WordSample,
-)
-from voc_builder.store import (
+from voc_builder.builder.models import WordProgress, WordSample
+from voc_builder.infras import config
+from voc_builder.infras.store import (
     InternalStateStore,
     MasteredWordStore,
     SystemSettingsStore,
     WordStore,
 )
+from voc_builder.system.models import GeminiConfig, OpenAIConfig, SystemSettings
 
 
 class TestMasteredWordsStore:

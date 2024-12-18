@@ -1,4 +1,4 @@
-from voc_builder.utils import get_word_candidates, tokenize_text
+from voc_builder.common.text import get_word_candidates, tokenize_text
 
 
 def test_tokenize_text():

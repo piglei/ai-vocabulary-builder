@@ -181,4 +181,12 @@ onUpdated(() => {
         }
     }
 }
+
+@media (min-width: 960px) {
+    .word-cards {
+        .word-card {
+            width: calc(16.66% - 10px); // 6 cards in a row
+        }
+    }
+}
 </style>

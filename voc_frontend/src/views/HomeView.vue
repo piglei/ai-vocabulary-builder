@@ -10,6 +10,7 @@ import { notyf } from '@/common/ui';
 import { exampleSentences, tokenizeText } from '@/common/text';
 import RecentWords from '@/components/RecentWords.vue'
 import 'tippy.js/dist/tippy.css';
+import WordCardRich from '@/components/WordCardRich.vue';
 
 // Validation for user input string
 const state = reactive({ userText: '' })
@@ -67,6 +68,8 @@ const addedWords = reactive([])
 const existingWords = reactive([])
 // Add the words which have been marked as mastered
 const masteredWords = reactive([])
+
+const disableWordTransition = ref(false)
 
 // Whether the user is in the mode of adding extra word instead of replacing the current one
 const addExtraMode = ref(false)
@@ -204,29 +207,22 @@ async function extractWordSample(origText: string, translatedText: string) {
 }
 
 // Remove current word sample form the vocabulary book
-async function removeWord() {
+async function removeWord(word: string) {
 	// Remove the word sample first
 	try {
 		await axios.post(window.API_ENDPOINT + '/api/word_samples/deletion/', {
 			mark_mastered: true,
-			words: [wordSample.word]
+			words: [word]
 		})
 
-        // Fade out the card
-        const card = document.querySelector('.extraction-card')
-        if (card) {
-            card.classList.add('removing')
-            setTimeout(() => {
-                wordSample.word = ''
-				if (extraStatus.value === JobStatus.Done) {
-					extraStatus.value = JobStatus.NotStarted
-				}
-            }, 500)
-        } else {
-            wordSample.word = ''
-			if (extraStatus.value === JobStatus.Done) {
-				extraStatus.value = JobStatus.NotStarted
-			}
+		// Reset the word sample if it's the same word
+		if (wordSample.word === word) {
+			wordSample.word = ''
+		}
+        // Find the word container by searching wordSample and addedWords
+        const wordIndex = addedWords.findIndex(w => w.word === word);
+        if (wordIndex !== -1) {
+            addedWords.splice(wordIndex, 1);
         }
 
 		// Also get known words again because "mastered" words may change
@@ -240,7 +236,7 @@ async function removeWord() {
 // Save a word manually
 async function saveWordManually(word: string, removeCurrent = false) {
 	if (removeCurrent && wordSample.word !== '') {
-		await removeWord()
+		await removeWord(wordSample.word)
 	}
 
 	extraStatus.value = JobStatus.Doing
@@ -353,9 +349,11 @@ function saveManually(word: string) {
 function addExtraWord(word: string) {
 	// Push current word sample to the addedWords list
 	if (wordSample.word) {
-		addedWords.push({
-			word: wordSample.word,
-			simple_definition: wordSample.simple_definition
+		addedWords.unshift(Object.assign({}, wordSample))
+		disableWordTransition.value = true
+		wordSample.word = ''
+		nextTick(() => {
+			disableWordTransition.value = false
 		})
 	}
 	saveWordManually(word, false)
@@ -430,15 +428,29 @@ onUpdated(() => {
 
 <template>
 	<div>
-	<div class="row mt-4" v-if="showTextArea">
+	<div class="row">
 		<div class="col-12">
-			<form>
+		</div>
+	</div>
+	<div class="row mt-2">
+		<div class="col-7">
+			<div class="mb-2">
+				<div style="display: inline-block" v-if="!showTextArea">
+					<a class="reset-link" href="javascript: void(0)" @click="reset"> 
+						<i class="bi bi-box-arrow-left"></i>
+						<span class="ms-2">back</span>
+					</a>
+					<span data-tippy-content="Choose from the words below." class="ms-2 me-2 badge text-bg-primary">Select Manually</span>
+				</div>
+				<span class="badge text-bg-secondary">English</span>
+			</div>
+			<form v-if="showTextArea">
 				<div class="mb-3">
 					<textarea
 						id="input-text"
 						autofocus
 						class="form-control"
-						style="height: 90px"
+						style="height: 160px"
 						placeholder="Text containing new vocabulary."
 						v-model="state.userText"
 						:class="{ 'is-invalid': v$.userText.$error }"
@@ -465,22 +477,10 @@ onUpdated(() => {
 					</button>
 				</div>
 			</form>
-		</div>
-	</div>
-	
-	<div class="row mt-4" v-if="!showTextArea">
-		<div class="col-12">
-				<div class="mt-1 mb-2">
-				<a class="reset-link" href="javascript: void(0)" @click="reset"> 
-					<i class="bi bi-box-arrow-left"></i>
-					<span class="ms-2">back</span>
-				</a>
-				</div>
+
+			<div v-if="!showTextArea" >
 				<div class="card inputted-text-card">
 					<div class="card-body">
-						<div class="mb-1">
-							<span data-tippy-content="Choose from the words below." class="badge text-bg-primary">Select Manually</span>
-						</div>
 						<template v-for="(t, index) in tokenizedText" :key="index">
 							<span v-if="t.token.type === 'delimiter'">
                                 {{ t.token.value }}
@@ -530,11 +530,30 @@ onUpdated(() => {
 						</template>
 					</div>
 				</div>
-				<i class="bi bi-pencil-square icon-action btn btn-light" data-tippy-content="Edit" @click="toggleTextArea"></i>
-				<i :class="['bi bi-file-plus icon-action btn', { 'btn-light': !addExtraMode, 'btn-primary': addExtraMode }]" data-tippy-content="Add an extra word" @click="toggleAddExtraMode"></i>
-				<i class="bi bi-arrow-counterclockwise icon-action btn btn-light" data-tippy-content="Reset" @click="reset"></i>
+					<i class="bi bi-pencil-square icon-action btn btn-light" data-tippy-content="Edit" @click="toggleTextArea"></i>
+					<i :class="['bi bi-file-plus icon-action btn', { 'btn-light': !addExtraMode, 'btn-primary': addExtraMode }]" data-tippy-content="Add an extra word" @click="toggleAddExtraMode"></i>
+					<i class="bi bi-arrow-counterclockwise icon-action btn btn-light" data-tippy-content="Reset" @click="reset"></i>
+				</div>
 		</div>
+
+		<div class="col-5">
+			<div class="mb-2">
+				<span class="badge text-bg-secondary">simplified Chinese</span>
+			</div>
+			<div class="card trans-ret bg-light">
+
+				<div class="card-body">
+					<div v-if="transStatus === JobStatus.NotStarted"><span class="text-secondary">Translation</span></div>
+					<div class="card-text" v-if="transStatus !== JobStatus.NotStarted">{{ liveTranslatedText }}</div>
+					<span class="text-secondary" v-if="transStatus === JobStatus.Doing">
+						...
+					</span>
+				</div>
+			</div>
+		</div>
+
 	</div>
+	
 
 	<div class="row mt-5">
 
@@ -576,29 +595,25 @@ onUpdated(() => {
 			</div>
 		</div>
 
-		<div class="col-7" v-if="transHasStarted">
-			<div class="card trans-ret">
-				<div class="card-header" v-if="transStatus === JobStatus.Doing">
-					<div class="spinner-border spinner-border-my-sm" role="status">
-						<span class="sr-only"></span>
-					</div>
-					&nbsp;
-					<span class="card-title-text">Translation in Progress...</span>
-				</div>
-				<div class="card-header" v-if="transStatus === JobStatus.Done">
-					<i class="bi bi-pencil"></i>
-					&nbsp;
-					<span class="card-title-text">Translation Result</span>
-				</div>
-
+		<div class="col-12 mb-2">
+			<div class="card shadow-sm" v-if="aiPickedExistedWord">
+				<div class="card-header">⚠️ Oops!</div>
 				<div class="card-body">
-					<div class="card-text">{{ liveTranslatedText }}</div>
+                    <div class="card-text text-secondary">
+                        <p>
+                            AI picked <strong>"{{ aiPickedExistedWord }}"</strong>, but
+                            it's already in your vocabulary book.
+                        </p>
+                        <p>
+                            ⏫ Try select the word from above. ⏫
+                        </p>
+					</div>
 				</div>
 			</div>
 		</div>
 
-		<div class="col-5">
-			<div class="card extraction-card shadow-sm" v-if="extraStatus === JobStatus.Doing">
+		<div class="word-cards-rich">
+			<div class="card word-card-loading shadow-sm" v-if="extraStatus === JobStatus.Doing">
 				<div class="card-header">
 					<div class="spinner-border spinner-border-my-sm" role="status">
 						<span class="sr-only"></span>
@@ -618,65 +633,12 @@ onUpdated(() => {
 				</div>
 			</div>
 
-			<div class="card shadow-sm" v-if="aiPickedExistedWord">
-				<div class="card-header">⚠️ Oops!</div>
-				<div class="card-body">
-                    <div class="card-text text-secondary">
-                        <p>
-                            AI picked <strong>"{{ aiPickedExistedWord }}"</strong>, but
-                            it's already in your vocabulary book.
-                        </p>
-                        <p>
-                            ⏫ Try select the word from above. ⏫
-                        </p>
-					</div>
-				</div>
-			</div>
-
-			<div class="card extraction-card shadow-sm border-primary" v-if="extraStatus === JobStatus.Done">
-				<div class="card-header">
-					<i class="bi bi-bookmark-plus"></i>
-					&nbsp;
-					<span class="card-title-text">Word</span>
-
-					<a
-						href="javascript:void(0)"
-						class="float-end"
-						style="font-size: 13px; margin-top: 2px"
-						@click="removeWord()"
-					>
-						Remove
-					</a>
-				</div>
-				<div class="card-body">
-					<div class="card-text">
-						<h5>{{ wordSample.word }}
-							<span
-								:data-tippy-content='`The base form of "${wordSample.word}" is "${wordSample.word_normal}"`'
-								v-if="wordSample.word !== wordSample.word_normal"
-								class="normal-form text-secondary">
-								({{ wordSample.word_normal }})
-							</span>
-						</h5>
-						<p class="pron">
-							{{ wordSample.pronunciation }}
-							<i class="bi bi-volume-up ms-2" @click="playWord(wordSample.word)" style="cursor: pointer;"></i>
-						</p>
-						<p class="definition" v-for="def of wordSample.structured_definitions">
-							<span v-if="def.part_of_speech" class="part-of-speech text-secondary">[{{ def.part_of_speech }}]</span>
-							{{ def.definition }}
-						</p>
-					</div>
-				</div>
-			</div>
-
-			<div v-for="word of addedWords" class="card shadow-sm mt-1" :key="word.word">
-				<div class="card-header text-truncate">
-					<i class="bi bi-bookmarks"></i>
-					&nbsp;
-					<span class="card-title-text">{{ word.word }}({{ word.simple_definition }})</span>
-				</div>
-			</div>
+			<Transition :name="disableWordTransition?'':'moveUpFadeOut'">
+				<WordCardRich v-if="wordSample.word" :wordSample="wordSample" :borderClass="'border-info'" :removeWordFunc="removeWord" />
+			</Transition>
+			<TransitionGroup name="moveUpFadeOut">
+				<WordCardRich v-for="word of addedWords" :key="word.word" :wordSample="word" :removeWordFunc="removeWord" />
+			</TransitionGroup>
 		</div>
 	</div>
 
@@ -685,8 +647,8 @@ onUpdated(() => {
 
 
 <style lang="scss" scoped>
-.trans-ret .card-text {
-	height: 140px;
+.trans-ret {
+	height: 160px;
 	overflow-y: auto;
 }
 
@@ -701,28 +663,6 @@ onUpdated(() => {
 	font-size: 16px;
 }
 
-.extraction-card .card-text {
-	height: 140px;
-	overflow-y: auto;
-
-	.pron {
-		font-size: 14px;
-	}
-
-	.definition {
-		font-size: 14px;
-		margin-bottom: 2px;
-	}
-
-	h5 span {
-		font-weight: normal;
-		font-size: 14px;
-	}
-}
-.extraction-card.removing {
-    animation: moveUpFadeOut 0.5s forwards;
-}
-
 .inprog-actions {
 	display: inline-block;
 }
@@ -733,6 +673,10 @@ onUpdated(() => {
 	color: #666;
 }
 
+.inputted-text-card {
+	height: 160px;
+	overflow-y: auto;
+}
 
 .inputted-text-card .card-body {
 	line-height: 28px;
@@ -794,24 +738,43 @@ onUpdated(() => {
 	}
 }
 
-.card-header.text-truncate {
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+@keyframes moveUpFadeOut {
+	0% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	50% {
+		opacity: 0.5;
+		transform: translateY(-10px);
+	}
+	100% {
+		opacity: 0;
+		transform: translateY(-20px);
+	}
 }
 
-@keyframes moveUpFadeOut {
-    0% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    50% {
-        opacity: 0.5;
-        transform: translateY(-10px);
-    }
-    100% {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
+.moveUpFadeOut-enter-active, .moveUpFadeOut-leave-active {
+	transition: all 0.5s ease;
+}
+
+.moveUpFadeOut-enter, .moveUpFadeOut-leave-to {
+	opacity: 0;
+	transform: translateY(-20px);
+}
+
+.word-cards-rich {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+	.word-card-loading,.word-card-rich {
+		min-height: 160px;
+	}
+	.word-card-loading {
+		width: calc(33% - 10px);
+		box-sizing: border-box;
+		margin-bottom: 10px;
+		min-height: 160px;
+	}
 }
 </style>

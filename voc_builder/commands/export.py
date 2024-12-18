@@ -6,7 +6,7 @@ from typing import Optional
 
 from rich.console import Console
 
-from voc_builder.export import VocCSVWriter
+from voc_builder.misc.export import VocCSVWriter
 
 console = Console()
 

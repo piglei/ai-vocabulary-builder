@@ -3,7 +3,7 @@
 import csv
 from typing import TextIO
 
-from voc_builder.store import get_word_store
+from voc_builder.infras.store import get_word_store
 
 
 class VocCSVWriter:

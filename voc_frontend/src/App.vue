@@ -1,7 +1,7 @@
 <template>
-  <div class="container" style="max-width: 800px">
-    <nav class="navbar navbar-expand-sm bg-light mt-2 mb-2">
-      <div class="container-fluid">
+  <div>
+    <nav class="navbar navbar-expand-sm bg-light mb-2">
+      <div class="container">
         <router-link class="navbar-brand" to="/">
           <strong>AI Voc-Builder</strong>
         </router-link>
@@ -36,7 +36,9 @@
       </div>
     </nav>
 
+  <div class="container">
     <RouterView />
+  </div>
 
     <footer class="footer mt-4 py-3 bg-light">
       <div class="container">

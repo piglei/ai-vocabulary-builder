@@ -11,8 +11,9 @@ import cattrs
 import pendulum
 from tinydb import Query, TinyDB
 
-from voc_builder import config
-from voc_builder.models import SystemSettings, WordProgress, WordSample
+from voc_builder.builder.models import WordProgress, WordSample
+from voc_builder.infras import config
+from voc_builder.system.models import SystemSettings
 
 
 class MasteredWordStore:

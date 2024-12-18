@@ -1,5 +1,5 @@
 from voc_builder.commands.export import handle_export
-from voc_builder.store import get_word_store
+from voc_builder.infras.store import get_word_store
 
 
 def test_handle_export_csv_file(tmp_path, w_sample_world):
