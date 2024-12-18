@@ -13,7 +13,7 @@ from packaging.tags import parse_tag
 from packaging.version import Version
 
 from voc_builder import __version__
-from voc_builder.store import get_internal_state_store
+from voc_builder.infras.store import get_internal_state_store
 
 logger = logging.getLogger()
 

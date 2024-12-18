@@ -1,4 +1,4 @@
-from voc_builder.models import WordDefinition, WordSample
+from voc_builder.builder.models import WordDefinition, WordSample
 
 
 class Test__get_structured_definitions:

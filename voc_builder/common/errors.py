@@ -3,7 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from .std_err import APIError, ErrorCode
+from .web.std_err import APIError, ErrorCode
 
 
 class ErrorCodes:

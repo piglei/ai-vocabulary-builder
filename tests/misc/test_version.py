@@ -1,4 +1,4 @@
-from voc_builder.version import JohnnyDist
+from voc_builder.misc.version import JohnnyDist
 
 
 def test__JohnnyDist():

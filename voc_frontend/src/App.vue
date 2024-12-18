@@ -1,8 +1,9 @@
 <template>
-  <div class="container" style="max-width: 800px">
-    <nav class="navbar navbar-expand-sm bg-light mt-2 mb-2">
-      <div class="container-fluid">
-        <router-link class="navbar-brand" to="/">
+  <div>
+    <nav class="navbar navbar-expand-sm bg-light mb-2">
+      <div class="container">
+        <router-link class="navbar-brand" id="navbar-brand-logo" to="/">
+          <img src="@/images/ai-voc-logo.png" alt="Logo" style="height: 40px; margin-right: 10px;">
           <strong>AI Voc-Builder</strong>
         </router-link>
         <button
@@ -36,7 +37,9 @@
       </div>
     </nav>
 
+  <div class="container">
     <RouterView />
+  </div>
 
     <footer class="footer mt-4 py-3 bg-light">
       <div class="container">
@@ -51,3 +54,12 @@
 
   </div>
 </template>
+
+<style lang="scss">
+#navbar-brand-logo {
+  padding-top: 0;
+  padding-bottom: 0;
+  display: flex;
+  align-items: center;
+}
+</style>

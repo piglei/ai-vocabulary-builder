@@ -1,7 +1,7 @@
 import pytest
 
-from voc_builder import config
-from voc_builder.models import WordSample
+from voc_builder.builder.models import WordSample
+from voc_builder.infras import config
 
 
 @pytest.fixture(autouse=True)
