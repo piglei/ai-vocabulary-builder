@@ -10,12 +10,24 @@ AI 生词本（“AI Vocabulary Builder” 简称 aivoc）是一个利用了 AI 
 
 产品截图：
 
-![image](https://github.com/user-attachments/assets/e89dd25b-b637-461e-9b89-fc9c2dc00c56)
-
-↑ 由 AI 智能提取生词
-
-![image](https://github.com/user-attachments/assets/52e4e594-80c0-4e55-99a8-14de51078d30)
-↑ 测验模式，帮助记忆
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <a href="https://github.com/user-attachments/assets/e89dd25b-b637-461e-9b89-fc9c2dc00c56" target="_blank">
+          <img src="https://github.com/user-attachments/assets/e89dd25b-b637-461e-9b89-fc9c2dc00c56" style="max-height: 200px;">
+        </a>
+        <br>↑ 由 AI 智能提取生词
+      </td>
+      <td align="center">
+        <a href="https://github.com/user-attachments/assets/52e4e594-80c0-4e55-99a8-14de51078d30" target="_blank">
+          <img src="https://github.com/user-attachments/assets/52e4e594-80c0-4e55-99a8-14de51078d30" style="max-height: 200px;">
+        </a>
+        <br>↑ 测验模式，帮助记忆
+      </td>
+    </tr>
+  </table>
+</div>
 
 ## 快速开始
 
