@@ -7,8 +7,8 @@
 Key Features:
 
 - Unique, efficient vocabulary building: **One-click** saving of sample sentences, translations, new words, and definitions.
-- Engaging story and quiz modes to help you master new words.
-- Supports over 10 target languages with multiple AI backends, including OpenAI, Gemini, and Anthropic.
+- Engaging **story and quiz modes** to help you master new words.
+- Supports **over 10 target languages** with multiple AI backends, including OpenAI, Gemini, and Anthropic.
 
 Product Screenshots:
 
