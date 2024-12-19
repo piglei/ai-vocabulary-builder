@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set
 
 import cattrs
-import pendulum
 from tinydb import Query, TinyDB
 
 from voc_builder.builder.models import WordProgress, WordSample
@@ -84,11 +83,6 @@ class WordDetailedObj:
         return datetime.datetime.fromtimestamp(self.ts_date_added).strftime(
             "%Y-%m-%d %H:%M"
         )
-
-    @property
-    def date_added_diff_for_humans(self) -> str:
-        """Return a string like "3 days ago" or "2 hours ago" for display"""
-        return pendulum.from_timestamp(self.ts_date_added).diff_for_humans()
 
 
 class WordStore:

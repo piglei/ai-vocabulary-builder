@@ -25,7 +25,7 @@ jobs:
     strategy:
       matrix:
         os: [Ubuntu, macOS, Windows]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         include:
           - os: Ubuntu
             image: ubuntu-22.04
@@ -39,53 +39,14 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v3
-
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Get full Python version
-        id: full-python-version
-        run: echo version=$(python -c "import sys; print('-'.join(str(v) for v in sys.version_info))") >> $GITHUB_OUTPUT
-
-      - name: Bootstrap poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python - -y
-
-      - name: Update PATH
-        if: ${{ matrix.os != 'Windows' }}
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Update Path for Windows
-        if: ${{ matrix.os == 'Windows' }}
-        run: echo "$APPDATA\Python\Scripts" >> $GITHUB_PATH
-
-      - name: Configure poetry
-        run: poetry config virtualenvs.in-project true
-
-      - name: Set up cache
-        uses: actions/cache@v3
-        id: cache
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Ensure cache is healthy
-        if: steps.cache.outputs.cache-hit == 'true'
-        run: |
-          # `timeout` is not available on macOS, so we define a custom function.
-          [ "$(command -v timeout)" ] || function timeout() { perl -e 'alarm shift; exec @ARGV' "$@"; }
-
-          # Using `timeout` is a safeguard against the Poetry command hanging for some reason.
-          timeout 10s poetry run pip --version || rm -rf .venv
-
-      - name: Check lock file
-        run: poetry lock --check
-
-      - name: Install dependencies
-        run: poetry install
-
-      - name: Run pytest
-        run: poetry run pytest -v
-
+          allow-prereleases: true
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+      - name: Install Nox
+        run:  uv pip install --system nox
+      - name: Run tests on ${{ matrix.os }}
+        run: nox --non-interactive --error-on-missing-interpreter --session "tests(python='${{ matrix.python-version }}')" -- --full-trace
