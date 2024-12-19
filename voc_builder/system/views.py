@@ -5,12 +5,29 @@ from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
 
 import voc_builder
-from voc_builder.constants import GEMINI_MODELS, OPENAI_MODELS, ModelProvider
 from voc_builder.infras.store import get_sys_settings_store, get_word_store
 from voc_builder.misc.version import get_new_version
-from voc_builder.system.models import GeminiConfig, OpenAIConfig, build_default_settings
+from voc_builder.system.constants import (
+    ANTHROPIC_MODELS,
+    GEMINI_MODELS,
+    OPENAI_MODELS,
+    ModelProvider,
+    TargetLanguage,
+)
+from voc_builder.system.language import get_target_language
+from voc_builder.system.models import (
+    AnthropicConfig,
+    GeminiConfig,
+    OpenAIConfig,
+    build_default_settings,
+)
 
-from .serializers import GeminiConfigInput, OpenAIConfigInput, SettingsInput
+from .serializers import (
+    AnthropicConfigInput,
+    GeminiConfigInput,
+    OpenAIConfigInput,
+    SettingsInput,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +52,7 @@ async def get_system_status(response: Response):
     return JSONResponse(
         {
             "version": voc_builder.__version__,
+            "target_language": get_target_language(),
             "model_settings_initialized": model_settings_initialized,
             "new_version": new_version,
             "words_cnt": words_cnt,
@@ -53,7 +71,14 @@ async def get_settings(response: Response):
     return JSONResponse(
         {
             "settings": cattrs.unstructure(settings),
-            "model_options": {"gemini": GEMINI_MODELS, "openai": OPENAI_MODELS},
+            "model_options": {
+                "gemini": GEMINI_MODELS,
+                "openai": OPENAI_MODELS,
+                "anthropic": ANTHROPIC_MODELS,
+            },
+            "target_language_options": [
+                cattrs.unstructure(lan.value) for lan in TargetLanguage
+            ],
         }
     )
 
@@ -66,6 +91,7 @@ async def save_settings(settings_input: SettingsInput, response: Response):
     if not settings:
         settings = build_default_settings()
 
+    settings.target_language = settings_input.target_language
     settings.model_provider = settings_input.model_provider
     # Update the model settings only for the selected provider type, validate the input
     # by pydantic models.
@@ -75,6 +101,9 @@ async def save_settings(settings_input: SettingsInput, response: Response):
     elif settings_input.model_provider == ModelProvider.GEMINI.value:
         g_obj = GeminiConfigInput(**settings_input.gemini_config)
         settings.gemini_config = GeminiConfig(**g_obj.model_dump(mode="json"))
+    elif settings_input.model_provider == ModelProvider.ANTHROPIC.value:
+        a_obj = AnthropicConfigInput(**settings_input.anthropic_config)
+        settings.anthropic_config = AnthropicConfig(**a_obj.model_dump(mode="json"))
 
     settings_store.set_system_settings(settings)
     return {}

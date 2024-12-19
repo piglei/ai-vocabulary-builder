@@ -1,8 +1,10 @@
 import logging
 from typing import List
 
+from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
 from pydantic import BaseModel
+from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai.models.openai import OpenAIModel
 
@@ -58,5 +60,12 @@ def create_ai_model():
             api_key=gemini_config.api_key,
             **extra_kwargs,  # type: ignore
         )
+    elif settings.model_provider == "anthropic":
+        anthropic_config = settings.anthropic_config
+        assert anthropic_config
+        a_client = AsyncAnthropic(
+            api_key=anthropic_config.api_key, base_url=anthropic_config.api_host or None
+        )
+        return AnthropicModel(anthropic_config.model, anthropic_client=a_client)
     else:
         raise AIModelNotConfiguredError("Unknown model provider")

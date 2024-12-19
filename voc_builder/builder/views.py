@@ -13,6 +13,7 @@ from voc_builder.common.text import tokenize_text
 from voc_builder.exceptions import AIServiceError
 from voc_builder.infras.ai import create_ai_model
 from voc_builder.infras.store import get_mastered_word_store, get_word_store
+from voc_builder.system.language import get_target_language
 
 from .ai_svc import get_rare_word, get_translation, get_word_manually
 from .serializers import (
@@ -42,7 +43,9 @@ async def gen_translation_sse(text: str) -> AsyncGenerator[Dict, None]:
     :param text: The text to be translated.
     """
     try:
-        async for translated_text in get_translation(create_ai_model(), text):
+        async for translated_text in get_translation(
+            create_ai_model(), text, get_target_language()
+        ):
             yield {
                 "event": "trans_partial",
                 "data": json.dumps({"translated_text": translated_text}),
@@ -68,7 +71,9 @@ async def create_word_sample(trans_obj: TranslatedTextInput, response: Response)
     known_words = word_store.filter(orig_words) | mastered_word_s.filter(orig_words)
 
     try:
-        choice = await get_rare_word(create_ai_model(), trans_obj.orig_text, known_words)
+        choice = await get_rare_word(
+            create_ai_model(), trans_obj.orig_text, known_words, get_target_language()
+        )
     except Exception as exc:
         logger.exception("Error extracting word.")
         raise error_codes.EXACTING_WORD_FAILED.format(str(exc))
@@ -156,7 +161,9 @@ async def manually_save(req: ManuallySelectInput, response: Response):
     word_store = get_word_store()
 
     try:
-        choice = await get_word_manually(create_ai_model(), req.orig_text, req.word)
+        choice = await get_word_manually(
+            create_ai_model(), req.orig_text, req.word, get_target_language()
+        )
     except Exception as exc:
         raise error_codes.MANUALLY_SAVE_WORD_FAILED.format(str(exc))
 

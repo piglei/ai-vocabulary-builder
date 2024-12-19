@@ -79,6 +79,7 @@ function toggleAddExtraMode() {
 }
 
 const systemStatus = reactive({
+	target_language: '',
 	model_settings_initialized: true,
 	version: '',
 	new_version: null,
@@ -544,7 +545,8 @@ onUpdated(() => {
 
 		<div class="col-5">
 			<div class="mb-2">
-				<span class="badge text-bg-secondary">simplified Chinese</span>
+				<span class="badge text-bg-secondary">{{ systemStatus.target_language }}</span>
+				<i id="edit-target-language" class="ms-1 bi bi-pencil-square text-primary" @click="$router.push('/app/settings')"></i>
 			</div>
 			<div class="card trans-ret bg-light">
 
@@ -782,5 +784,10 @@ onUpdated(() => {
 		margin-bottom: 10px;
 		min-height: 160px;
 	}
+}
+
+#edit-target-language {
+	font-size: 12px;
+	cursor: pointer;
 }
 </style>

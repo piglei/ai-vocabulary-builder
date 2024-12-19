@@ -17,6 +17,35 @@ url = "https://mirrors.tencent.com/pypi/simple"
 reference = "tencent-mirror"
 
 [[package]]
+name = "anthropic"
+version = "0.42.0"
+description = "The official Python library for the anthropic API"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "anthropic-0.42.0-py3-none-any.whl", hash = "sha256:46775f65b723c078a2ac9e9de44a46db5c6a4fabeacfd165e5ea78e6817f4eff"},
+    {file = "anthropic-0.42.0.tar.gz", hash = "sha256:bf8b0ed8c8cb2c2118038f29c58099d2f99f7847296cafdaa853910bfff4edf4"},
+]
+
+[package.dependencies]
+anyio = ">=3.5.0,<5"
+distro = ">=1.7.0,<2"
+httpx = ">=0.23.0,<1"
+jiter = ">=0.4.0,<1"
+pydantic = ">=1.9.0,<3"
+sniffio = "*"
+typing-extensions = ">=4.10,<5"
+
+[package.extras]
+bedrock = ["boto3 (>=1.28.57)", "botocore (>=1.31.57)"]
+vertex = ["google-auth (>=2,<3)"]
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
 name = "anyio"
 version = "3.6.2"
 description = "High level compatibility layer for multiple asynchronous event loop implementations"
@@ -612,13 +641,13 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "httpx"
-version = "0.28.1"
+version = "0.27.2"
 description = "The next generation HTTP client."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "httpx-0.28.1-py3-none-any.whl", hash = "sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad"},
-    {file = "httpx-0.28.1.tar.gz", hash = "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc"},
+    {file = "httpx-0.27.2-py3-none-any.whl", hash = "sha256:7bb2708e112d8fdd7829cd4243970f0c223274051cb35ee80c03301ee29a3df0"},
+    {file = "httpx-0.27.2.tar.gz", hash = "sha256:f7c2be1d2f3c3c3160d441802406b206c2b76f5947b11115e6df10c6c65e66c2"},
 ]
 
 [package.dependencies]
@@ -626,6 +655,7 @@ anyio = "*"
 certifi = "*"
 httpcore = "==1.*"
 idna = "*"
+sniffio = "*"
 
 [package.extras]
 brotli = ["brotli", "brotlicffi"]
@@ -762,6 +792,38 @@ url = "https://mirrors.tencent.com/pypi/simple"
 reference = "tencent-mirror"
 
 [[package]]
+name = "json-repair"
+version = "0.32.0"
+description = "A package to repair broken json strings"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "json_repair-0.32.0-py3-none-any.whl", hash = "sha256:a06a83c62e75c69a58cda5902f5631adec567d6584413cf233b412b491cf8580"},
+    {file = "json_repair-0.32.0.tar.gz", hash = "sha256:eed776fb24dbcce5bcd200f3c254a7d70fda40405c31c97f52a5ca8cfb7cf3e4"},
+]
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
+name = "jsonpath-python"
+version = "1.0.6"
+description = "A more powerful JSONPath implementation in modern python"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "jsonpath-python-1.0.6.tar.gz", hash = "sha256:dd5be4a72d8a2995c3f583cf82bf3cd1a9544cfdabf2d22595b67aff07349666"},
+    {file = "jsonpath_python-1.0.6-py3-none-any.whl", hash = "sha256:1e3b78df579f5efc23565293612decee04214609208a2335884b3ee3f786b575"},
+]
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
 name = "logfire-api"
 version = "2.7.0"
 description = "Shim for the Logfire SDK which does nothing unless Logfire is installed"
@@ -816,6 +878,33 @@ files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
     {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
 ]
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
+name = "mistralai"
+version = "1.2.5"
+description = "Python Client SDK for the Mistral AI API."
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "mistralai-1.2.5-py3-none-any.whl", hash = "sha256:5f0ef2680ead0329569111face1bf2ff7c67c454d43aa0e21324a8faf6c3ab22"},
+    {file = "mistralai-1.2.5.tar.gz", hash = "sha256:05d4130f79704e3b19c0b6320944a348547879fce6894feeb72d9e9d0ee65151"},
+]
+
+[package.dependencies]
+eval-type-backport = ">=0.2.0,<0.3.0"
+httpx = ">=0.27.0,<0.28.0"
+jsonpath-python = ">=1.0.6,<2.0.0"
+pydantic = ">=2.9.0,<3.0.0"
+python-dateutil = ">=2.8.2,<3.0.0"
+typing-inspect = ">=0.9.0,<0.10.0"
+
+[package.extras]
+gcp = ["google-auth (==2.27.0)", "requests (>=2.32.3,<3.0.0)"]
 
 [package.source]
 type = "legacy"
@@ -1128,20 +1217,20 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "pydantic-ai"
-version = "0.0.12"
+version = "0.0.13"
 description = "Agent Framework / shim to use Pydantic with LLMs"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "pydantic_ai-0.0.12-py3-none-any.whl", hash = "sha256:0dbfec39744a4ed87467bb0ce34c736cf6b3cade0256a7530e8b4a7c7c916afb"},
-    {file = "pydantic_ai-0.0.12.tar.gz", hash = "sha256:e86ff5e5137be64c247a9ea1cf39867a96a92de28ed60440ec46fcc32ca8916c"},
+    {file = "pydantic_ai-0.0.13-py3-none-any.whl", hash = "sha256:daf61bd509bb107bb4c06cac289001ca5711d4f25dc9f5a47eec1a6926c4e98e"},
+    {file = "pydantic_ai-0.0.13.tar.gz", hash = "sha256:6bfa5565b4cd6646d7964fc626d3016258eaa173c216403294a327a79808819a"},
 ]
 
 [package.dependencies]
-pydantic-ai-slim = {version = "0.0.12", extras = ["groq", "openai", "vertexai"]}
+pydantic-ai-slim = {version = "0.0.13", extras = ["anthropic", "groq", "mistral", "openai", "vertexai"]}
 
 [package.extras]
-examples = ["pydantic-ai-examples (==0.0.12)"]
+examples = ["pydantic-ai-examples (==0.0.13)"]
 logfire = ["logfire (>=2.3)"]
 
 [package.source]
@@ -1151,29 +1240,34 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "pydantic-ai-slim"
-version = "0.0.12"
+version = "0.0.13"
 description = "Agent Framework / shim to use Pydantic with LLMs, slim package"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "pydantic_ai_slim-0.0.12-py3-none-any.whl", hash = "sha256:8b3054229b15f99dc5d85a70ad8e2a70933b0eb7ee0dc8d649b9bc0269863f0c"},
-    {file = "pydantic_ai_slim-0.0.12.tar.gz", hash = "sha256:d4db0daa87cf232b4142cdb831902ddab814239bc5bf4894d01232b1bb37e646"},
+    {file = "pydantic_ai_slim-0.0.13-py3-none-any.whl", hash = "sha256:89621784f724cc76e3f703093dee274934931edd55015a15561ca4a8f4c03996"},
+    {file = "pydantic_ai_slim-0.0.13.tar.gz", hash = "sha256:139db29ac4ffdc5adcc1c872ca73d3ac1ca55488e601eb037b64a96633d6d6e7"},
 ]
 
 [package.dependencies]
+anthropic = {version = ">=0.40.0", optional = true, markers = "extra == \"anthropic\""}
 eval-type-backport = ">=0.2.0"
 google-auth = {version = ">=2.36.0", optional = true, markers = "extra == \"vertexai\""}
 griffe = ">=1.3.2"
 groq = {version = ">=0.12.0", optional = true, markers = "extra == \"groq\""}
 httpx = ">=0.27.2"
+json-repair = {version = ">=0.30.3", optional = true, markers = "extra == \"mistral\""}
 logfire-api = ">=1.2.0"
+mistralai = {version = ">=1.2.5", optional = true, markers = "extra == \"mistral\""}
 openai = {version = ">=1.54.3", optional = true, markers = "extra == \"openai\""}
 pydantic = ">=2.10"
 requests = {version = ">=2.32.3", optional = true, markers = "extra == \"vertexai\""}
 
 [package.extras]
+anthropic = ["anthropic (>=0.40.0)"]
 groq = ["groq (>=0.12.0)"]
 logfire = ["logfire (>=2.3)"]
+mistral = ["json-repair (>=0.30.3)", "mistralai (>=1.2.5)"]
 openai = ["openai (>=1.54.3)"]
 vertexai = ["google-auth (>=2.36.0)", "requests (>=2.32.3)"]
 
@@ -1759,6 +1853,26 @@ url = "https://mirrors.tencent.com/pypi/simple"
 reference = "tencent-mirror"
 
 [[package]]
+name = "typing-inspect"
+version = "0.9.0"
+description = "Runtime inspection utilities for typing module."
+optional = false
+python-versions = "*"
+files = [
+    {file = "typing_inspect-0.9.0-py3-none-any.whl", hash = "sha256:9ee6fc59062311ef8547596ab6b955e1b8aa46242d854bfc78f4f6b0eff35f9f"},
+    {file = "typing_inspect-0.9.0.tar.gz", hash = "sha256:b23fc42ff6f6ef6954e4852c1fb512cdd18dbea03134f91f856a95ccc9461f78"},
+]
+
+[package.dependencies]
+mypy-extensions = ">=0.3.0"
+typing-extensions = ">=3.7.4"
+
+[package.source]
+type = "legacy"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "tencent-mirror"
+
+[[package]]
 name = "unearth"
 version = "0.17.2"
 description = "A utility to fetch and download python packages"
@@ -2050,4 +2164,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "38adc2a9cdfa779470f8b00a5f63812b6f69407d300a01a08c437b923d492e7e"
+content-hash = "3d8d06fe08b86fa487451b15f99d7cb660dc25f31b34fa49c559cc041c6b8776"

@@ -1,4 +1,7 @@
 from enum import Enum
+from typing import Optional
+
+from attrs import define
 
 
 class ModelProvider(Enum):
@@ -6,6 +9,39 @@ class ModelProvider(Enum):
 
     OPENAI = "openai"
     GEMINI = "gemini"
+    ANTHROPIC = "anthropic"
+
+
+@define
+class Language:
+    """A language."""
+
+    code: str
+    name: str
+
+
+class TargetLanguage(Enum):
+    """Supported target languages."""
+
+    SIMPLIFIED_CHINESE = Language("zh-Hans", "Simplified Chinese")
+    TRADITIONAL_CHINESE = Language("zh-Hant", "Traditional Chinese")
+    ARABIC = Language("ar", "Arabic")
+    FRENCH = Language("fr", "French")
+    GERMAN = Language("de", "German")
+    HINDI = Language("hi", "Hindi")
+    JAPANESE = Language("ja", "Japanese")
+    KOREAN = Language("ko", "Korean")
+    RUSSIAN = Language("ru", "Russian")
+    SPANISH = Language("es", "Spanish")
+    PORTUGUESE = Language("pt", "Portuguese")
+
+    @classmethod
+    def get_by_code(cls, code: str) -> "Optional[TargetLanguage]":
+        """Get a target language by its code."""
+        for language in cls:
+            if language.value.code == code:
+                return language
+        return None
 
 
 # Available Gemini models
@@ -53,4 +89,11 @@ OPENAI_MODELS = [
     "gpt-3.5-turbo-1106",
     "gpt-3.5-turbo-0125",
     "gpt-3.5-turbo-16k-0613",
+]
+
+# Available Anthropic models
+ANTHROPIC_MODELS = [
+    "claude-3-5-haiku-latest",
+    "claude-3-5-sonnet-latest",
+    "claude-3-opus-latest",
 ]
