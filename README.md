@@ -14,8 +14,8 @@ Product Screenshots:
   <table>
     <tr>
       <td align="center">
-        <a href="https://github.com/user-attachments/assets/cbf46c1b-e383-46e2-96ce-bbce0098fe11" target="_blank">
-          <img src="https://github.com/user-attachments/assets/cbf46c1b-e383-46e2-96ce-bbce0098fe11" style="max-height: 200px;">
+        <a href="https://github.com/user-attachments/assets/5f45a172-bb01-4277-81e4-68e3381d2113" target="_blank">
+          <img src="https://github.com/user-attachments/assets/5f45a172-bb01-4277-81e4-68e3381d2113" style="max-height: 200px;">
         </a>
         <br>↑ AI-Powered Smart Vocabulary Extraction
       </td>
