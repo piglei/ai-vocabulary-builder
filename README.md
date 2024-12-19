@@ -31,12 +31,27 @@ Product Screenshots:
 
 ## Quick Start
 
-This tool is developed using Python. Please use `pip` to install it:
+This tool is developed using Python. Please use `pip` or other packaging tools to install it:
 
-```console
-# Requires Python version 3.9 or higher
+```bash
 pip install ai-vocabulary-builder
 ```
+
+[pipx](https://github.com/pypa/pipx)
+
+```bash
+pipx install ai-vocabulary-builder
+```
+
+[uv](https://github.com/astral-sh/uv)
+
+```bash
+uv pip install ai-vocabulary-builder
+# or uvx to run the notebook directly
+# uvx --from ai-vocabulary-builder aivoc notebook
+```
+
+> Requires Python version 3.9 or higher.
 
 After installation, run `aivoc notebook` to open the application in your browser.
 
