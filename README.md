@@ -1,5 +1,7 @@
 # AI-Voc Builder
 
+> Available in other languages: [[中文]](docs/README_zh.md)
+
 "AI-Voc Builder" is a smart English vocabulary tool powered by AI technology. It helps you quickly build your own English vocabulary and learn more effectively.
 
 Key Features:
@@ -54,6 +56,12 @@ uv pip install ai-vocabulary-builder
 > Requires Python version 3.9 or higher.
 
 After installation, run `aivoc notebook` to open the application in your browser.
+
+## Features
+
+The most commonly used features can be found inside the notebook app. Here are some more advanced features:
+
+- Integration with [PopClip](https://www.popclip.app/) to add new words by highlighting. [Read Guide](docs/integrations.md)
 
 ## Configurations
 

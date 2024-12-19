@@ -40,6 +40,12 @@ pip install ai-vocabulary-builder
 
 安装完成后，执行 `aivoc notebook`，在浏览器中打开应用。
 
+## 常用功能
+
+绝大多数常用功能都可以在 notebook 中找到，下面是一些更高级的功能：
+
+- 和 [PopClip](https://www.popclip.app/) 集成实现划词添加生词功能。 [操作指引](docs/integrations.md)
+
 ## 常用配置
 
 本工具的主要配置项可通过 Web 页面来管理，此处仅列举其他由环境变量配置项。
