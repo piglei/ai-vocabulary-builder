@@ -14,14 +14,14 @@ Product Screenshots:
   <table>
     <tr>
       <td align="center">
-        <a href="https://github.com/user-attachments/assets/e89dd25b-b637-461e-9b89-fc9c2dc00c56" target="_blank">
-          <img src="https://github.com/user-attachments/assets/e89dd25b-b637-461e-9b89-fc9c2dc00c56" style="max-height: 200px;">
+        <a href="https://github.com/user-attachments/assets/cbf46c1b-e383-46e2-96ce-bbce0098fe11" target="_blank">
+          <img src="https://github.com/user-attachments/assets/cbf46c1b-e383-46e2-96ce-bbce0098fe11" style="max-height: 200px;">
         </a>
         <br>↑ AI-Powered Smart Vocabulary Extraction
       </td>
       <td align="center">
-        <a href="https://github.com/user-attachments/assets/52e4e594-80c0-4e55-99a8-14de51078d30" target="_blank">
-          <img src="https://github.com/user-attachments/assets/52e4e594-80c0-4e55-99a8-14de51078d30" style="max-height: 200px;">
+        <a href="https://github.com/user-attachments/assets/bdfe9802-bccc-4d85-9fc5-09829a20bbcc" target="_blank">
+          <img src="https://github.com/user-attachments/assets/bdfe9802-bccc-4d85-9fc5-09829a20bbcc" style="max-height: 200px;">
         </a>
         <br>↑ Test Mode for Enhanced Memorization
       </td>
