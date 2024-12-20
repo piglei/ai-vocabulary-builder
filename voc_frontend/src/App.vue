@@ -4,7 +4,7 @@
       <div class="container">
         <router-link class="navbar-brand" id="navbar-brand-logo" to="/">
           <img src="@/images/ai-voc-logo.png" alt="Logo" style="height: 40px; margin-right: 10px;">
-          <strong>AI Voc-Builder</strong>
+          <strong>AI Voc Builder</strong>
         </router-link>
         <button
           class="navbar-toggler"

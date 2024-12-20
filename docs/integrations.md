@@ -6,7 +6,7 @@ Install the following PopClip extension (select the full YAML content):
 
 ```YAML
 #popclip
-name: AI-Voc Builder
+name: AI Voc Builder
 icon: iconify:material-symbols:collections-bookmark
 url: http://127.0.0.1:16093/?text=***
 ```

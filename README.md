@@ -1,8 +1,8 @@
-# AI-Voc Builder
+# AI Voc Builder
 
 > Available in other languages: [[中文]](docs/README_zh.md)
 
-"AI-Voc Builder" is a smart English vocabulary tool powered by AI technology. It helps you quickly build your own English vocabulary and learn more effectively.
+"AI Voc Builder" is a smart English vocabulary tool powered by AI technology. It helps you quickly build your own English vocabulary and learn more effectively.
 
 Key Features:
 
@@ -81,4 +81,4 @@ export AIVOC_DATA_DIR="$HOME/Documents"
 
 When learning English, a vocabulary builder is a very important tool. A good vocabulary builder should include at least the following: **new words, definitions, example sentences, and example sentence translations** . However, maintaining this information manually is very tedious. As a result, most people who have studied English for many years do not have their own vocabulary builder. They often encounter new words while reading, look them up in the dictionary, and then forget them 20 seconds later.
 
-"AI-Voc Builder" tries to use the power of AI to make the process of building a vocabulary builder easy and fun, so that everyone can have their own vocabulary builder and quickly expand their vocabulary.
+"AI Voc Builder" tries to use the power of AI to make the process of building a vocabulary builder easy and fun, so that everyone can have their own vocabulary builder and quickly expand their vocabulary.
