@@ -190,6 +190,3 @@ def validate_result_word(word: WordSample, orig_text: str):
     """Check if a result word is valid before it can be put into vocabulary book"""
     if get_word_store().exists(word.word):
         raise error_codes.WORD_ALREADY_EXISTS.set_data(word.word)
-    if get_word_store().exists(word.word):
-        raise error_codes.WORD_ALREADY_EXISTS.set_data(word.word)
-        raise error_codes.WORD_ALREADY_EXISTS.set_data(word.word)
