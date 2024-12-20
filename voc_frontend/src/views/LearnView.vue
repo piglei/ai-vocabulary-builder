@@ -19,8 +19,26 @@ onMounted(() => {
 
 onUpdated(() => {
 	nextTick(() => {
-		tippy('.action-panel i[data-tippy-content]', {delay: 100})
 		tippy('.word-extra-info span[data-tippy-content]', {delay: 100})
+		
+		// Initialize tippy for confirmation
+		tippy('.action-panel a.mark-mastered', {
+			content: '<div class="mb-1">Marking a word as "Mastered" will prevent it from appearing again when building vocabularies.</div><br><button class="btn btn-sm btn-danger confirm-btn">Confirm</button>',
+			trigger: 'click',
+			interactive: true,
+			allowHTML: true,
+			appendTo: document.body,
+			onShow(instance) {
+				const confirmButton = instance.popper.querySelector('.confirm-btn');
+				if (confirmButton) {
+					confirmButton.onclick = () => {
+						const word = instance.reference.getAttribute('data-word');
+						removeWord(word, true);
+						instance.hide();
+					};
+				}
+			}
+		});
 	})
 })
 
@@ -43,9 +61,12 @@ async function getWords() {
 }
 
 // Remove a word
-async function removeWord(word) {
+async function removeWord(word, markMastered) {
 	try {
-		await axios.post(window.API_ENDPOINT + '/api/word_samples/deletion/', {words: [word]})
+		await axios.post(window.API_ENDPOINT + '/api/word_samples/deletion/', {
+			mark_mastered: markMastered,	
+			words: [word]}
+		)
 	} catch (error) {
 		const msg = error.resposne ? error.response.data.message : error.message
 		notyf.error('Error requesting API: ' + msg)
@@ -85,6 +106,7 @@ function exportWords() {
 							<col span="1" style="width: 140px" />
 							<col span="1" />
 							<col span="1" />
+							<col span="1" style="width: 100px" />
 						</colgroup>
 						
 						<tbody>
@@ -109,11 +131,24 @@ function exportWords() {
 										<i class="bi bi-calendar"></i>
 										<span class="ms-2" :data-tippy-content="word.dateAdded.toISO()">Added {{ word.dateAdded.toRelativeCalendar() }}</span>
 									</p>
-									
+								</td>
+								<td>
 									<div class="action-panel">
-										<a href="javascript:void(0)" @click="removeWord(word.ws.word)">
-											<i class="bi bi-trash" data-tippy-content="Remove"></i>
+										<a class="me-2 mark-mastered" title='Mark as "mastered"' :data-word="word.ws.word">
+											<i class="bi bi-check-circle"></i>
 										</a>
+										<div class="dropdown">
+											<a href="javascript:void(0)" class="dropdown-toggle no-caret" data-bs-toggle="dropdown" aria-expanded="false">
+												<i class="bi bi-three-dots"></i>
+											</a>
+											<ul class="dropdown-menu">
+												<li>
+													<a class="dropdown-item" href="javascript:void(0)" @click="removeWord(word.ws.word, false)">
+														<i class="bi bi-trash"></i> Remove
+													</a>
+												</li>
+											</ul>
+										</div>
 									</div>
 								</td>
 							</tr>
@@ -153,27 +188,23 @@ function exportWords() {
 	td:last-child {
 		padding-right: 24px;
 	}
-}
-.word-row {
-	position: relative;
-}
-.word-row:hover .action-panel {
-	display: block;
+
+	.dropdown {
+		display: inline-block;
+		.dropdown-item {
+			font-size: 14px;
+			color: #007bff;
+		}
+	}
 }
 .action-panel {
-	display: none;
-	position: absolute;
-	font-size: 16px;
-	right: 10px;
-	top: 50%;
-	transform: translateY(-50%);
-	border: 1px solid #ccc;
-	padding: 5px 14px;
-	background-color: white;
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-	
+	font-size: 18px;
+	text-align: right;
 	i {
 		cursor: pointer;
 	}
+}
+.no-caret::after {
+	display: none;
 }
 </style>

@@ -42,6 +42,7 @@ async def gen_translation_sse(text: str) -> AsyncGenerator[Dict, None]:
 
     :param text: The text to be translated.
     """
+
     try:
         async for translated_text in get_translation(
             create_ai_model(), text, get_target_language()

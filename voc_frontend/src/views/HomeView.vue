@@ -16,7 +16,7 @@ import WordCardRich from '@/components/WordCardRich.vue';
 const state = reactive({ userText: '' })
 const rules = {
 	userText: {
-		minLengthValue: maxLength(800),
+		minLengthValue: maxLength(1600),
 		maxLengthValue: minLength(12),
 		required,
 		$autoDirty: true
@@ -457,7 +457,6 @@ onUpdated(() => {
 						id="input-text"
 						autofocus
 						class="form-control"
-						style="height: 160px"
 						placeholder="Text containing new vocabulary."
 						v-model="state.userText"
 						:class="{ 'is-invalid': v$.userText.$error }"
@@ -559,12 +558,10 @@ onUpdated(() => {
 				</div>
 			</div>
 		</div>
-
 	</div>
 	
 
-	<div class="row mt-5">
-
+	<div class="row mt-4">
 		<div class="col-12" v-if="!transHasStarted">
 			<h5>Recently added</h5>
 			<RecentWords />
@@ -655,8 +652,9 @@ onUpdated(() => {
 
 
 <style lang="scss" scoped>
-.trans-ret {
-	height: 160px;
+#input-text,.trans-ret,.inputted-text-card {
+	min-height: 160px;
+	max-height: 240px;
 	overflow-y: auto;
 }
 
@@ -679,11 +677,6 @@ onUpdated(() => {
 	font-size: 16px;
 	font-weight: 500;
 	color: #666;
-}
-
-.inputted-text-card {
-	height: 160px;
-	overflow-y: auto;
 }
 
 .inputted-text-card .card-body {
