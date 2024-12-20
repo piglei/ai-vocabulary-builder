@@ -42,6 +42,7 @@ async def gen_translation_sse(text: str) -> AsyncGenerator[Dict, None]:
 
     :param text: The text to be translated.
     """
+
     try:
         async for translated_text in get_translation(
             create_ai_model(), text, get_target_language()
@@ -188,4 +189,7 @@ async def manually_save(req: ManuallySelectInput, response: Response):
 def validate_result_word(word: WordSample, orig_text: str):
     """Check if a result word is valid before it can be put into vocabulary book"""
     if get_word_store().exists(word.word):
+        raise error_codes.WORD_ALREADY_EXISTS.set_data(word.word)
+    if get_word_store().exists(word.word):
+        raise error_codes.WORD_ALREADY_EXISTS.set_data(word.word)
         raise error_codes.WORD_ALREADY_EXISTS.set_data(word.word)

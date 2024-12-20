@@ -65,7 +65,7 @@ onMounted(() => {
                 <div class="text-secondary" v-if="masteredWords.length === 0">No mastered words.</div>
 
                 <div class="word-cards mt-4">
-                    <div v-for="word of masteredWords" class="card border-secondary-subtle mb-3 word-card" :key="word">
+                    <div v-for="word of masteredWords" class="card border-secondary-subtle mb-2 word-card" :key="word">
                         <div class="card-body d-flex">
                             {{ word }}
                             <i class="bi bi-trash recycle-icon text-primary" @click="deleteMasteredWord(word)"></i>
