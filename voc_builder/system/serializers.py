@@ -15,6 +15,7 @@ class SettingsInput(BaseModel):
     openai_config: Dict[str, Any]
     gemini_config: Dict[str, Any]
     anthropic_config: Dict[str, Any]
+    deepseek_config: Dict[str, Any]
 
     @field_validator("target_language")
     @classmethod
@@ -62,6 +63,19 @@ class GeminiConfigInput(BaseModel):
 
 
 class AnthropicConfigInput(BaseModel):
+    api_key: str = Field(..., min_length=1)
+    api_host: Union[AnyHttpUrl, Literal[""]]
+    model: str
+
+    @field_validator("model")
+    @classmethod
+    def validate_model(cls, value):
+        if not value:
+            raise ValueError("model is required")
+        return value
+
+
+class DeepSeekConfigInput(BaseModel):
     api_key: str = Field(..., min_length=1)
     api_host: Union[AnyHttpUrl, Literal[""]]
     model: str

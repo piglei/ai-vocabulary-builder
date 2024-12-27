@@ -116,7 +116,7 @@ function extractWord() {
 
 	source.addEventListener('trans_partial', (event) => {
 		const parsedData = JSON.parse(event.data)
-		liveTranslatedText.value += parsedData.translated_text
+		liveTranslatedText.value = parsedData.translated_text
 	})
 
 	// Translation finished, set the text and start extracting

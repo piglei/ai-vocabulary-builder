@@ -1,5 +1,6 @@
 import logging
-from typing import AsyncGenerator, List, Set
+import re
+from typing import Any, AsyncGenerator, List, Set
 
 from pydantic import BaseModel
 from pydantic_ai import Agent
@@ -7,6 +8,7 @@ from pydantic_ai import Agent
 from voc_builder.builder.models import WordChoice
 from voc_builder.common.text import get_word_candidates
 from voc_builder.exceptions import AIServiceError
+from voc_builder.infras.ai import AIResultMode, PromptText
 
 logger = logging.getLogger()
 
@@ -71,91 +73,153 @@ async def query_translation(
             yield message
 
 
-# The prompt being used to extract multiple words
-prompt_rare_word_system = """You are a english reading specialist, I will give you a list \
-of english words separated by ",", please find the most rarely encountered word as the result. \
+class RareWordQuerier:
+    """Query the AI to get the rare word."""
 
-Reply the result word, the base form, the {language} definition and \
-the pronunciation of the result word.
+    prompt_system_tmpl = """\
+You are a english reading specialist, I will give you a list \
+of english words separated by ",", please find the most rarely encountered word."""
 
-- List all possible definitions, separated by "$", with each formatted as \
-"[{{part of speech(adj/noun/...)}}] {{ {language} definition }}".
-    - Example: [noun] {language} definition1 $ [verb] {language} definition2
-- A paragraph will be given as a reference because there might be homographs.
-"""  # noqa: E501
+    prompt_user_tmpl = """\
+Word List: {words}
+
+Paragraph for reference: {text}"""
+
+    def __init__(self, model, result_mode: AIResultMode):
+        self.model = model
+        self.result_mode = result_mode
+
+    async def query(self, text: str, known_words: Set[str], language: str) -> WordChoice:
+        """Query the most rarely word in the given text."""
+        words = get_word_candidates(text, known_words=known_words)
+        if not words:
+            raise AIServiceError(
+                "Text does not contain any words that meet the criteria"
+            )
+
+        prompt = PromptText(
+            system_lines=[self.prompt_system_tmpl.format(language=language)],
+            user_lines=[self.prompt_user_tmpl.format(text=text, words=", ".join(words))],
+        )
+        return await word_def_getter_factory(self.result_mode).query(
+            self.model, prompt, language
+        )
 
 
-prompt_rare_word_user_tmpl = """\
-Words: {words}
+class ManuallyWordQuerier:
+    """Get a word that is manually selected by user."""
 
-Paragraph for reference: {text}
-"""
-
-
-async def get_rare_word(
-    model, text: str, known_words: Set[str], language: str
-) -> WordChoice:
-    """Get the most rarely word in given text."""
-    words = get_word_candidates(text, known_words=known_words)
-    if not words:
-        raise AIServiceError("Text does not contain any words that meet the criteria")
-
-    user_content = prompt_rare_word_user_tmpl.format(text=text, words=", ".join(words))
-    prompt = prompt_rare_word_system.format(language=language) + user_content
-    agent: Agent = Agent(model, result_type=WordChoiceModelResp)
-    try:
-        result = await agent.run(prompt)
-    except Exception as e:
-        raise AIServiceError("Error calling AI backend API: %s" % e)
-
-    item = result.data
-    return WordChoice(
-        word=item.word,
-        word_normal=item.word_base_form,
-        pronunciation=item.pronunciation,
-        definitions=item.get_definition_list(),
+    prompt_system_tmpl = (
+        "You are a translation assistant, I will give you an english word."
     )
 
-
-prompt_word_manually_system = """You are a translation assistant, I will give you a \
-a english word.
-
-Reply the word, the base form, the {language} definition and the \
-pronunciation of the word.
-
-- List all possible definitions, separated by "$", with each formatted as \
-"[{{part of speech(adj/noun/...)}}] {{ {language} definition }}".
-    - Example: [noun] {language} definition1 $ [verb] {language} definition2
-- A paragraph will be given as a reference because there might be homographs.
-"""  # noqa: E501
-
-
-prompt_word_manually_user_tmpl = """\
+    prompt_user_tmpl = """\
 Word: {word}
 
-Paragraph for reference: {text}
-"""
+Paragraph for reference: {text}"""
+
+    def __init__(self, model, result_mode: AIResultMode):
+        self.model = model
+        self.result_mode = result_mode
+
+    async def query(self, text: str, word: str, language: str) -> WordChoice:
+        """Query the manually selected word."""
+        prompt = PromptText(
+            system_lines=[self.prompt_system_tmpl.format(language=language)],
+            user_lines=[self.prompt_user_tmpl.format(text=text, word=word)],
+        )
+        return await word_def_getter_factory(self.result_mode).query(
+            self.model, prompt, language
+        )
 
 
-async def get_word_manually(model, text: str, word: str, language: str) -> WordChoice:
-    """Get a word that is manually selected by user.
+def word_def_getter_factory(result_mode: AIResultMode) -> "BaseWordDefGetter":
+    if result_mode == AIResultMode.PYDANTIC:
+        return PydanticWordDefGetter()
+    elif result_mode == AIResultMode.JSON:
+        return JsonWordDefGetter()
+    raise ValueError("Invalid result getting mode")
 
-    :param text: The text which contains the word.
-    :param word: The selected word.
-    :raise: AIServiceError
-    """
-    user_content = prompt_word_manually_user_tmpl.format(text=text, word=word)
-    prompt = prompt_word_manually_system.format(language=language) + user_content
-    agent: Agent = Agent(model, result_type=WordChoiceModelResp)
-    try:
-        result = await agent.run(prompt)
-    except Exception as e:
-        raise AIServiceError("Error calling AI backend API: %s" % e)
 
-    item = result.data
-    return WordChoice(
-        word=item.word,
-        word_normal=item.word_base_form,
-        pronunciation=item.pronunciation,
-        definitions=item.get_definition_list(),
-    )
+class BaseWordDefGetter:
+    """Base class for getting word definition."""
+
+    prompt_word_extra_reqs = """\
+- Reply the word, the base form, the {language} definition and \
+the pronunciation of the word.
+- List all possible definitions, separated by "$", with each formatted as \
+"[{{part of speech(adj/noun/...)}}] {{ {language} definition }}".
+    - Example: [noun] {language} definition1 $ [verb] {language} definition2
+- A paragraph will be given as a reference because there might be homographs."""
+
+    async def query(self, model, prompt: PromptText, language: str) -> WordChoice:
+        """Query the AI to get the word definition.
+
+        :param model: The AI model object.
+        :param prompt: The prompt text, it should make the AI return a word.
+        :param language: The language of the word definition.
+        """
+        raise NotImplementedError
+
+    def _to_word_choice(self, item: WordChoiceModelResp) -> WordChoice:
+        return WordChoice(
+            word=item.word,
+            word_normal=item.word_base_form,
+            pronunciation=item.pronunciation,
+            definitions=item.get_definition_list(),
+        )
+
+
+class JsonWordDefGetter(BaseWordDefGetter):
+    """Get a word's definitions, AI agent return JSON result."""
+
+    prompt_json_output = """\
+output the result in JSON format.
+
+EXAMPLE JSON OUTPUT:
+{{
+    "word": "...",
+    "word_base_form": "...",
+    "definitions": "...",
+    "pronunciation": "..."
+}}"""
+
+    async def query(self, model, prompt: PromptText, language: str) -> WordChoice:
+        prompt.system_lines.append(self.prompt_word_extra_reqs.format(language=language))
+        prompt.system_lines.append(self.prompt_json_output)
+        result = await self.agent_request(model, prompt)
+        item = self._parse_json_output(result.data)
+        return self._to_word_choice(item)
+
+    async def agent_request(self, model, prompt: PromptText) -> Any:
+        agent: Agent = Agent(model, system_prompt=prompt.system)
+        try:
+            return await agent.run(prompt.user)
+        except Exception as e:
+            raise AIServiceError("Error calling AI backend API: %s" % e)
+
+    def _parse_json_output(self, data: str) -> WordChoiceModelResp:
+        """Parse the JSON output to get the word object."""
+        obj = re.search(r"{[\s\S]*}", data, flags=re.MULTILINE)
+        if not obj:
+            raise AIServiceError("Invalid JSON output")
+        return WordChoiceModelResp.model_validate_json(obj.group())
+
+
+class PydanticWordDefGetter(BaseWordDefGetter):
+    """Get a word's definitions, AI agent return Pydantic result."""
+
+    async def query(self, model, prompt: PromptText, language: str) -> WordChoice:
+        """Query the word using Pydantic mode."""
+        prompt.system_lines.append(self.prompt_word_extra_reqs.format(language=language))
+        result = await self.agent_request(model, prompt)
+        return self._to_word_choice(result.data)
+
+    async def agent_request(self, model, prompt: PromptText) -> Any:
+        agent: Agent = Agent(
+            model, system_prompt=prompt.system, result_type=WordChoiceModelResp
+        )
+        try:
+            return await agent.run(prompt.user)
+        except Exception as e:
+            raise AIServiceError("Error calling AI backend API: %s" % e)

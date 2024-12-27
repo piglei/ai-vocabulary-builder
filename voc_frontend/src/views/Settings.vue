@@ -22,6 +22,11 @@ const settings = reactive({
 		api_key: "",
 		api_host: "",
 		model: ""
+	},
+	deepseek_config: {
+		api_key: "",
+		api_host: "",
+		model: ""
 	}
 })
 
@@ -50,6 +55,11 @@ const toggleAnthropicApiKeyVisibility = () => {
 	showAnthropicApiKey.value = !showAnthropicApiKey.value;
 };
 
+const showDeepSeekApiKey = ref(false);
+
+const toggleDeepSeekApiKeyVisibility = () => {
+	showDeepSeekApiKey.value = !showDeepSeekApiKey.value;
+};
 
 onMounted(() => {
 	loadSettings()
@@ -114,6 +124,7 @@ const handleSubmit = async (event: Event) => {
 						<option value="openai">OpenAI API</option>
 						<option value="gemini">Google Gemini</option>
 						<option value="anthropic">Anthropic</option>
+						<option value="deepseek">DeepSeek</option>
 					</select>
 				</div>
 				
@@ -188,6 +199,33 @@ const handleSubmit = async (event: Event) => {
 						<label for="anthropic_model" class="form-label">Model  <span class="text-danger">*</span></label>
 						<select name="anthropic_model" class="form-select" v-model="settings.anthropic_config.model">
 							<option v-for="o of modelOptions.anthropic" :key="o" :value="o">{{ o }}</option>
+						</select>
+					</div>
+				</div>
+
+				<!-- The DeepSeek configs -->
+				<div v-show="settings.model_provider === 'deepseek'">
+					<div class="mb-3">
+						<label for="deepseek_api_key" class="form-label">API Key <span class="text-danger">*</span></label>
+						<div class="input-group">
+							<input :type="showDeepSeekApiKey ? 'text' : 'password'" class="form-control" id="deepseek_api_key" name="deepseek_api_key" v-model="settings.deepseek_config.api_key" placeholder="">
+							<button type="button" class="btn btn-outline-secondary" @click="toggleDeepSeekApiKeyVisibility">{{ showDeepSeekApiKey ? 'Hide' : 'Show' }}</button>
+						</div>
+						<div class="form-text">
+							<a href="https://platform.deepseek.com/" target="_blank">Get API key in DeepSeek Platform</a>
+						</div>
+					</div>
+					<div class="mb-3">
+						<label for="deepseek_api_host" class="form-label">API Host</label>
+						<input class="form-control" id="deepseek_api_host" name="deepseek_api_host" v-model="settings.deepseek_config.api_host" placeholder="">
+						<div class="form-text">
+							Optional, the default value is <a href="https://api.deepseek.com">https://api.deepseek.com</a>
+						</div>
+					</div>
+					<div class="mb-3">
+						<label for="deepseek_model" class="form-label">Model  <span class="text-danger">*</span></label>
+						<select name="deepseek_model" class="form-select" v-model="settings.deepseek_config.model">
+							<option v-for="o of modelOptions.deepseek" :key="o" :value="o">{{ o }}</option>
 						</select>
 					</div>
 				</div>
