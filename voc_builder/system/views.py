@@ -9,6 +9,7 @@ from voc_builder.infras.store import get_sys_settings_store, get_word_store
 from voc_builder.misc.version import get_new_version
 from voc_builder.system.constants import (
     ANTHROPIC_MODELS,
+    DEEPSEEK_MODELS,
     GEMINI_MODELS,
     OPENAI_MODELS,
     ModelProvider,
@@ -17,6 +18,7 @@ from voc_builder.system.constants import (
 from voc_builder.system.language import get_target_language
 from voc_builder.system.models import (
     AnthropicConfig,
+    DeepSeekConfig,
     GeminiConfig,
     OpenAIConfig,
     build_default_settings,
@@ -24,6 +26,7 @@ from voc_builder.system.models import (
 
 from .serializers import (
     AnthropicConfigInput,
+    DeepSeekConfigInput,
     GeminiConfigInput,
     OpenAIConfigInput,
     SettingsInput,
@@ -75,6 +78,7 @@ async def get_settings(response: Response):
                 "gemini": GEMINI_MODELS,
                 "openai": OPENAI_MODELS,
                 "anthropic": ANTHROPIC_MODELS,
+                "deepseek": DEEPSEEK_MODELS,
             },
             "target_language_options": [
                 cattrs.unstructure(lan.value) for lan in TargetLanguage
@@ -104,6 +108,9 @@ async def save_settings(settings_input: SettingsInput, response: Response):
     elif settings_input.model_provider == ModelProvider.ANTHROPIC.value:
         a_obj = AnthropicConfigInput(**settings_input.anthropic_config)
         settings.anthropic_config = AnthropicConfig(**a_obj.model_dump(mode="json"))
+    elif settings_input.model_provider == ModelProvider.DEEPSEEK.value:
+        d_obj = DeepSeekConfigInput(**settings_input.deepseek_config)
+        settings.deepseek_config = DeepSeekConfig(**d_obj.model_dump(mode="json"))
 
     settings_store.set_system_settings(settings)
     return {}

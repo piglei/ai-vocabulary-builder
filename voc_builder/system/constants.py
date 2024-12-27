@@ -10,6 +10,7 @@ class ModelProvider(Enum):
     OPENAI = "openai"
     GEMINI = "gemini"
     ANTHROPIC = "anthropic"
+    DEEPSEEK = "deepseek"
 
 
 @define
@@ -96,4 +97,8 @@ ANTHROPIC_MODELS = [
     "claude-3-5-haiku-latest",
     "claude-3-5-sonnet-latest",
     "claude-3-opus-latest",
+]
+
+DEEPSEEK_MODELS = [
+    "deepseek-chat",
 ]

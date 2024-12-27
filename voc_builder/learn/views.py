@@ -11,7 +11,7 @@ from typing_extensions import Annotated
 from voc_builder.builder.models import WordSample
 from voc_builder.builder.serializers import WordSampleOutput
 from voc_builder.exceptions import AIServiceError
-from voc_builder.infras.ai import create_ai_model
+from voc_builder.infras.ai import create_ai_model_config
 from voc_builder.infras.store import get_mastered_word_store, get_word_store
 from voc_builder.misc.export import VocCSVWriter
 
@@ -48,7 +48,8 @@ async def gen_story_sse(words: List[WordSample]) -> AsyncGenerator[Dict, None]:
     }
 
     try:
-        async for text in get_story(create_ai_model(), words):
+        model_config = create_ai_model_config()
+        async for text in get_story(model_config.model, words):
             yield {"event": "story_partial", "data": text}
     except AIServiceError as e:
         yield {"event": "error", "data": json.dumps({"message": str(e)})}
