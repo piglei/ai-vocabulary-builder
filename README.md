@@ -53,6 +53,26 @@ uv pip install ai-vocabulary-builder
 # uvx --from ai-vocabulary-builder aivoc notebook
 ```
 
+[docker](https://hub.docker.com/_/python)
+
+clone project
+```bash
+git clone https://github.com/piglei/ai-vocabulary-builder.git
+```
+
+build image
+```bash
+sudo docker build -t my-vocabulary-builder .
+```
+
+run docker image
+```bash
+sudo docker run -d -p 10000:10000 -v ~/.aivoc_db:/root/.aivoc_db:Z my-vocabulary-builder
+```
+
+Then run in browser http://127.0.0.1:10000/ to start working.
+
+
 > Requires Python version 3.9 or higher.
 
 After installation, run `aivoc notebook` to open the application in your browser.
