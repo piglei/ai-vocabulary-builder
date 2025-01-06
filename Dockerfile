@@ -18,5 +18,5 @@ FROM python:3.10-slim
 WORKDIR /app
 COPY --from=builder /app/voc_builder ./voc_builder
 COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
-EXPOSE 10000
-CMD ["python", "-m", "voc_builder.main", "notebook", "--host", "0.0.0.0", "--port", "10000"]
+EXPOSE 16093
+CMD ["python", "-m", "voc_builder.main", "notebook", "--host", "0.0.0.0"]
