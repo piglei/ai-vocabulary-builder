@@ -57,6 +57,10 @@ uv pip install ai-vocabulary-builder
 
 After installation, run `aivoc notebook` to open the application in your browser.
 
+## Docker
+
+For easier setup and a consistent environment, you can also use Docker. See the [CONTRIBUTING.md](CONTRIBUTING.md) file for instructions on building and running the Docker image.
+
 ## Features
 
 The most commonly used features can be found inside the notebook app. Here are some more advanced features:
