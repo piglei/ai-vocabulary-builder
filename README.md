@@ -33,6 +33,10 @@ Product Screenshots:
 
 ## Quick Start
 
+You can run AI Voc Builder either directly on your system or using Docker.
+
+### Option 1: Direct Installation
+
 This tool is developed using Python. Please use `pip` or other packaging tools to install it:
 
 ```bash
@@ -57,9 +61,46 @@ uv pip install ai-vocabulary-builder
 
 After installation, run `aivoc notebook` to open the application in your browser.
 
-## Docker
+### Option 2: Docker Installation
 
-For easier setup and a consistent environment, you can also use Docker. See the [CONTRIBUTING.md](CONTRIBUTING.md) file for instructions on building and running the Docker image.
+If you prefer using Docker, we provide a containerized version of AI Voc Builder:
+
+1. Clone the repository
+```bash
+git clone https://github.com/piglei/ai-vocabulary-builder.git
+cd ai-vocabulary-builder
+```
+
+2. Start the application
+
+```bash
+make build  # Build the Docker image
+make start  # Start the container
+```
+
+The application will be available at http://127.0.0.1:16093
+
+Managing the Docker container:
+
+```bash
+make start   # Start the container
+make stop    # Stop the container
+```
+
+All data will be persisted in the `aivoc_data` directory within your project folder.
+
+When you want to update to a newer version:
+
+```bash
+make update  # Rebuild container with the latest version of ai-vocabulary-builder
+```
+
+The make update command is useful when:
+
+- There's a new version of ai-vocabulary-builder released
+- You've pulled the latest code from the repository
+
+This command will rebuild the container with the newest version while preserving all your vocabulary data.
 
 ## Features
 
@@ -73,11 +114,14 @@ The main configurations for this tool can be managed from the web page. Here are
 
 ### AIVOC_DATA_DIR
 
-Specifies the path where the vocabulary data files are stored. The default path is the current user's home directory: ~/.
+Specifies the path where the vocabulary data files are stored.
 
-Example:
+- For direct installation: The default path is the current user's home directory (`~/.`)
+- For Docker installation: Data is stored in the `aivoc_data` directory within your project folder
 
-```
+Example for direct installation:
+
+```bash
 export AIVOC_DATA_DIR="$HOME/Documents"
 ```
 
