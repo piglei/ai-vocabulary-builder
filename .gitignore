@@ -131,3 +131,6 @@ dmypy.json
 # VSCode
 settings.json
 .DS_Store
+
+# aivoc
+aivoc_data/

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  aivoc:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    ports:
+      - "16093:16093"
+    volumes:
+      - ../../aivoc_data:/data
+    environment:
+      - AIVOC_DATA_DIR=/data
+    restart: unless-stopped
