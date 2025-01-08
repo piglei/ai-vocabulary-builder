@@ -74,6 +74,8 @@ Then, run the following command:
 docker-compose up
 ```
 
+After the container is started, you can access the application at `http://127.0.0.1:16093`.
+
 ## Docker
 
 For easier setup and a consistent environment, you can also use Docker. See the [CONTRIBUTING.md](CONTRIBUTING.md) file for instructions on building and running the Docker image.
