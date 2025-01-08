@@ -33,6 +33,8 @@ Product Screenshots:
 
 ## Quick Start
 
+### Option 1: Package Installation
+
 This tool is developed using Python. Please use `pip` or other packaging tools to install it:
 
 ```bash
@@ -56,6 +58,21 @@ uv pip install ai-vocabulary-builder
 > Requires Python version 3.9 or higher.
 
 After installation, run `aivoc notebook` to open the application in your browser.
+
+### Option 2: Docker Deployment
+
+You can also use docker-compose to run the application. First, clone the repository:
+
+```bash
+git clone https://github.com/your-repo/ai-vocabulary-builder.git
+cd ai-vocabulary-builder
+```
+
+Then, run the following command:
+
+```bash
+docker-compose up
+```
 
 ## Docker
 
