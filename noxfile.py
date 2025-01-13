@@ -8,6 +8,7 @@ ALL_PYTHON = ["3.9", "3.10", "3.11", "3.12", "3.13"]
 def tests(session):
     session.run("python", "-m", "ensurepip", "--upgrade")
     session.install("pytest")
+    session.install("pytest-asyncio")
     session.install("-e", ".[all]")
     session.run("pytest", "tests/", *session.posargs)
 

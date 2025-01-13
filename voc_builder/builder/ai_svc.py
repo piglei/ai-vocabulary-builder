@@ -48,9 +48,9 @@ async def get_translation(model, text: str, language: str) -> AsyncGenerator[str
 
 # The prompt being used to translate text
 prompt_main_system = """\
-You are a translation assistant, I will give you a paragraph of english, please \
-translate it into {language}, the answer should only include the translated \
-content and have no extra content.
+You are a translation assistant. I will provide you with a paragraph in English. \
+Please translate it into {language}. Your response should include only the translated \
+content, with no additional commentary or information.
 """
 
 prompt_main_user_tmpl = """\
@@ -77,11 +77,21 @@ class RareWordQuerier:
     """Query the AI to get the rare word."""
 
     prompt_system_tmpl = """\
-You are a english reading specialist, I will give you a list \
-of english words separated by ",", please find the most rarely encountered word."""
+You are tasked with identifying the word in a provided list that is most likely to be \
+unfamiliar to a typical English learner. The word should be one that is less commonly \
+used or more advanced in vocabulary.
+
+The reference paragraph is given to provide context for the words and their meanings. The selected word must:
+
+1. Be from the provided word list.
+2. Be the most advanced, uncommon, or specialized word compared to the others in the list, \
+considering the context provided by the paragraph.
+
+Return the following details in the specified format:
+"""
 
     prompt_user_tmpl = """\
-Word List: {words}
+Word List(separated by ","): {words}
 
 Paragraph for reference: {text}"""
 
@@ -109,9 +119,10 @@ Paragraph for reference: {text}"""
 class ManuallyWordQuerier:
     """Get a word that is manually selected by user."""
 
-    prompt_system_tmpl = (
-        "You are a translation assistant, I will give you an english word."
-    )
+    prompt_system_tmpl = """\
+You are a language assistant for English learners. Given an English word and a paragraph \
+containing the word, return the following details in the specified format:
+"""
 
     prompt_user_tmpl = """\
 Word: {word}
@@ -145,12 +156,14 @@ class BaseWordDefGetter:
     """Base class for getting word definition."""
 
     prompt_word_extra_reqs = """\
-- Reply the word, the base form, the {language} definition and \
-the pronunciation of the word.
-- List all possible definitions, separated by "$", with each formatted as \
-"[{{part of speech(adj/noun/...)}}] {{ {language} definition }}".
-    - Example: [noun] {language} definition1 $ [verb] {language} definition2
-- A paragraph will be given as a reference because there might be homographs."""
+1. Word: The exact word provided.
+2. Base Form: The root or base form of the word.
+3. Definitions: A list of all possible {language} definitions for the word, separated by "$", \
+formatted as follows: `[{{part of speech}}] {{ {language} definition}}`
+    - Include all definitions, and ensure the one used in the provided paragraph is included.
+    - Example: [noun] {language} definition1 $ [verb] {language} definition2.
+4. Pronunciation: The phonetic transcription of the word in IPA (International Phonetic Alphabet).
+"""
 
     async def query(self, model, prompt: PromptText, language: str) -> WordChoice:
         """Query the AI to get the word definition.
