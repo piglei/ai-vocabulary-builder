@@ -27,11 +27,15 @@ async def get_story(model, words: List[WordSample]) -> AsyncGenerator[str, None]
 
 # The prompt being used to generate stroy from words
 prompt_write_story_user_tmpl = """\
-Please write a short story which is less than {total_words_cnt} words, the story should use simple \
-words and these special words must be included: {words}.  Also surround every special word \
-with a single "$" character at the beginning and the end.
+You are a helpful language tutor. Write a short and engaging story using the following words: \
+{words}. In the story, these words should be used naturally, but other words should be simple, \
+common, and easy for a beginner to understand. The story should be fun and interesting, making \
+sure to keep the sentences short and clear. Avoid using difficult vocabulary, and make the story \
+exciting enough to keep the reader’s attention while helping them learn new words.
 
-- Use paragraphs to improve readability.
+1. Surround each special word with a single "$" character at the beginning and end.
+2. Use paragraphs to improve readability.
+3. The length of the story should be less than {total_words_cnt} words.
 """  # noqa: E501
 
 

@@ -4,12 +4,13 @@ from unittest import mock
 import pytest
 
 from voc_builder.builder.ai_svc import (
+    JsonWordDefGetter,
     ManuallyWordQuerier,
     RareWordQuerier,
     WordChoiceModelResp,
 )
 from voc_builder.exceptions import AIServiceError
-from voc_builder.infras.ai import AIResultMode
+from voc_builder.infras.ai import AIResultMode, PromptText
 
 # A valid JSON word reply
 VALID_JSON_REPLY = """{
@@ -28,8 +29,104 @@ VALID_PYDANTIC_REPLY = WordChoiceModelResp(
 )
 
 
+@pytest.fixture(params=["rare_word", "manually_word"])
+def word_querier_invoker(request, result_mode):
+    """A fixture that return an invoker function to query a word using a word querier."""
+    if request.param == "rare_word":
+
+        async def _invoker():
+            return await RareWordQuerier(None, result_mode=result_mode).query(
+                "The team's synergy was evident in their performance.",
+                set(),
+                "Simplified Chinese",
+            )
+
+        return "rare_word", _invoker
+    elif request.param == "manually_word":
+
+        async def _invoker():
+            return await ManuallyWordQuerier(None, result_mode=result_mode).query(
+                "The team's synergy was evident in their performance.",
+                "synergy",
+                "Simplified Chinese",
+            )
+
+        return "manually_word", _invoker
+    return None
+
+
+# The key prompts for the different word queriers, will be used for assertion in the tests
+KEY_PROMPT_BY_QUERIER = {
+    "rare_word": {
+        "system": ["less commonly used or more advanced in vocabulary"],
+        "user": ["Word List(separated by ", "):"],
+    },
+    "manually_word": {
+        "system": ["an English word"],
+        "user": ["Word:"],
+    },
+}
+
+
 @pytest.mark.asyncio
-class TestRareWordQuerierJsonResult:
+class TestDifferentWordQuerierJsonResult:
+    @pytest.fixture()
+    def result_mode(self):
+        return AIResultMode.JSON
+
+    @mock.patch("voc_builder.builder.ai_svc.JsonWordDefGetter.agent_request")
+    async def test_json_valid_response(self, mocker, word_querier_invoker):
+        querier_name, _invoker = word_querier_invoker
+        mocker.return_value = SimpleNamespace(data=VALID_JSON_REPLY)
+
+        word = await _invoker()
+        # Check the prompt
+        prompt = mocker.call_args[0][1]
+        assert "A list of all possible" in prompt.system
+        assert "JSON OUTPUT" in prompt.system
+
+        assert_querier_key_prompts(prompt, querier_name)
+
+        # Check the word object
+        assert word.word == "synergy"
+        assert word.definitions == ["[noun] 协同作用，协同效应"]
+
+
+@pytest.mark.asyncio
+class TestDifferentWordQuerierPydanticResult:
+    @pytest.fixture()
+    def result_mode(self):
+        return AIResultMode.PYDANTIC
+
+    @mock.patch("voc_builder.builder.ai_svc.PydanticWordDefGetter.agent_request")
+    async def test_json_valid_response(self, mocker, word_querier_invoker):
+        querier_name, _invoker = word_querier_invoker
+        mocker.return_value = SimpleNamespace(data=VALID_PYDANTIC_REPLY)
+
+        word = await _invoker()
+        # Check the prompt
+        prompt = mocker.call_args[0][1]
+        assert "A list of all possible" in prompt.system
+        assert "JSON OUTPUT" not in prompt.system
+
+        assert_querier_key_prompts(prompt, querier_name)
+
+        # Check the word object
+        assert word.word == "synergy"
+        assert word.definitions == ["[noun] 协同作用，协同效应"]
+
+
+def assert_querier_key_prompts(prompt, querier_name):
+    """Check the key prompts for the different word queriers."""
+    key_system_prompt = KEY_PROMPT_BY_QUERIER[querier_name]["system"]
+    assert all(keyword in prompt.system for keyword in key_system_prompt)
+
+    key_user_prompt = KEY_PROMPT_BY_QUERIER[querier_name]["user"]
+    assert all(keyword in prompt.user for keyword in key_user_prompt)
+
+
+@pytest.mark.asyncio
+class TestJsonWordDefGetter:
     @pytest.mark.parametrize(
         "data",
         [
@@ -39,126 +136,18 @@ class TestRareWordQuerierJsonResult:
         ],
     )
     @mock.patch("voc_builder.builder.ai_svc.JsonWordDefGetter.agent_request")
-    async def test_json_valid_response(self, mocker, data):
+    async def test_valid_response(self, mocker, data):
         mocker.return_value = SimpleNamespace(data=data)
-
-        word = await RareWordQuerier(None, result_mode=AIResultMode.JSON).query(
-            "The team's synergy was evident in their performance.",
-            set(),
-            "Simplified Chinese",
+        word = await JsonWordDefGetter().query(
+            None, PromptText([], []), "Simplified Chinese"
         )
-
-        # Check the prompt
-        prompt = mocker.call_args[0][1]
-        assert all(
-            keyword in prompt.system
-            for keyword in [
-                "rarely encountered word",
-                "JSON OUTPUT",
-                "List all possible definitions",
-            ]
-        )
-        assert all(keyword in prompt.user for keyword in ["Word List:", "synergy"])
-
-        # Check the word object
         assert word.word == "synergy"
-        assert word.definitions == ["[noun] 协同作用，协同效应"]
 
     @mock.patch("voc_builder.builder.ai_svc.JsonWordDefGetter.agent_request")
     async def test_invalid_response(self, mocker):
         mocker.return_value = SimpleNamespace(data="not a valid json")
 
         with pytest.raises(AIServiceError):
-            await RareWordQuerier(None, result_mode=AIResultMode.JSON).query(
-                "The team's synergy was evident in their performance.",
-                set(),
-                "Simplified Chinese",
+            await JsonWordDefGetter().query(
+                None, PromptText([], []), "Simplified Chinese"
             )
-
-
-@pytest.mark.asyncio
-class TestRareWordQuerierPydanticResult:
-    @mock.patch("voc_builder.builder.ai_svc.PydanticWordDefGetter.agent_request")
-    async def test_normal(self, mocker):
-        mocker.return_value = SimpleNamespace(data=VALID_PYDANTIC_REPLY)
-
-        word = await RareWordQuerier(None, result_mode=AIResultMode.PYDANTIC).query(
-            "The team's synergy was evident in their performance.",
-            set(),
-            "Simplified Chinese",
-        )
-
-        # Check the prompt
-        prompt = mocker.call_args[0][1]
-        assert all(
-            keyword in prompt.system
-            for keyword in [
-                "rarely encountered word",
-                "List all possible definitions",
-            ]
-        )
-        assert all(keyword in prompt.user for keyword in ["Word List:", "synergy"])
-        assert "JSON OUTPUT" not in prompt.system
-
-        # Check the word object
-        assert word.word == "synergy"
-        assert word.definitions == ["[noun] 协同作用，协同效应"]
-
-
-@pytest.mark.asyncio
-class TestManuallyWordQuerierJSONResult:
-    @mock.patch("voc_builder.builder.ai_svc.JsonWordDefGetter.agent_request")
-    async def test_valid_json_result(self, mocker):
-        data = f"""```json\n{VALID_JSON_REPLY}\n```"""
-        mocker.return_value = SimpleNamespace(data=data)
-
-        word = await ManuallyWordQuerier(None, result_mode=AIResultMode.JSON).query(
-            "The team's synergy was evident in their performance.",
-            "synergy",
-            "Simplified Chinese",
-        )
-
-        # Check the prompt
-        prompt = mocker.call_args[0][1]
-        assert all(
-            keyword in prompt.system
-            for keyword in [
-                "an english word",
-                "JSON OUTPUT",
-                "List all possible definitions",
-            ]
-        )
-        assert all(keyword in prompt.user for keyword in ["Word:", "synergy"])
-
-        # Check the word object
-        assert word.word == "synergy"
-        assert word.definitions == ["[noun] 协同作用，协同效应"]
-
-
-@pytest.mark.asyncio
-class TestManuallyWordQuerierPydanticResult:
-    @mock.patch("voc_builder.builder.ai_svc.PydanticWordDefGetter.agent_request")
-    async def test_valid_pydantic_result(self, mocker):
-        mocker.return_value = SimpleNamespace(data=VALID_PYDANTIC_REPLY)
-
-        word = await ManuallyWordQuerier(None, result_mode=AIResultMode.PYDANTIC).query(
-            "The team's synergy was evident in their performance.",
-            "synergy",
-            "Simplified Chinese",
-        )
-
-        # Check the prompt
-        prompt = mocker.call_args[0][1]
-        assert all(
-            keyword in prompt.system
-            for keyword in [
-                "an english word",
-                "List all possible definitions",
-            ]
-        )
-        assert "JSON OUTPUT" not in prompt.system
-        assert all(keyword in prompt.user for keyword in ["Word:", "synergy"])
-
-        # Check the word object
-        assert word.word == "synergy"
-        assert word.definitions == ["[noun] 协同作用，协同效应"]
