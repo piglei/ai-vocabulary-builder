@@ -31,6 +31,8 @@ AI 生词本（“AI Vocabulary Builder” 简称 aivoc）是一个利用了 AI 
 
 ## 快速开始
 
+### 方法 1：直接安装
+
 本工具基于 Python 开发，请使用 pip 来安装本工具：
 
 ```console
@@ -39,6 +41,23 @@ pip install ai-vocabulary-builder
 ```
 
 安装完成后，执行 `aivoc notebook`，在浏览器中打开应用。
+
+### 方法 2：Docker 部署
+
+也可以使用 docker-compose 来运行应用。首先，clone 项目至本地：
+
+```bash
+git clone https://github.com/your-repo/ai-vocabulary-builder.git
+cd ai-vocabulary-builder
+```
+
+然后，运行以下命令：
+
+```bash
+docker-compose up
+```
+
+容器启动后，即可通过 `http://127.0.0.1:16093` 访问应用。
 
 ## 常用功能
 

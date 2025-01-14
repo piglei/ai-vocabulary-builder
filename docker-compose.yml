@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  aivoc:
+    image: piglei/ai-vocabulary-builder:latest
+    container_name: ai-vocabulary-builder
+    ports:
+      - "16093:16093"
+    volumes:
+      - ${HOME}/.aivoc_db:/root/.aivoc_db
+    restart: unless-stopped
