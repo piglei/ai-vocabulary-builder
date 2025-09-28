@@ -16,9 +16,9 @@ def tests(session):
 @nox.session(python="3.9", reuse_venv=True)
 def lint(session: nox.Session) -> None:
     """Run pre-commit linting."""
-    session.install("pre-commit")
+    session.install("prek")
     session.run(
-        "pre-commit",
+        "prek",
         "run",
         "--all-files",
         "--show-diff-on-failure",
