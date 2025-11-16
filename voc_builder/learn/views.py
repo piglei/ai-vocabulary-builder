@@ -65,7 +65,7 @@ def export_words():
     fp.seek(0)
 
     now = datetime.datetime.now()
-    filename = now.strftime("ai_vov_words_%Y%m%d_%H%M.csv")
+    filename = now.strftime("ai_voc_words_%Y%m%d_%H%M.csv")
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return StreamingResponse(fp, headers=headers)
 

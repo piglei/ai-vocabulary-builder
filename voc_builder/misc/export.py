@@ -71,7 +71,7 @@ class AnkiDeckWriter:
 .pronunciation {
   font-size: 12px;
   color: #999;
-  font-decoration: italic;
+  font-style: italic;
   margin-top: 14px;
   margin-bottom: 8px;
 }

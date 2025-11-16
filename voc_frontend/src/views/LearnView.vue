@@ -149,8 +149,8 @@ async function downloadAnkiDeck() {
 		const blob = resp.data
 		const contentDisposition = resp.headers['content-disposition']
 
-		// Try to extract filename from headers, it not found, use default
-		let filename = 'ai_vov_words.anki.apkg'
+		// Try to extract filename from headers, if not found, use default
+		let filename = 'ai_voc_words.anki.apkg'
 		if (contentDisposition) {
 			const match = contentDisposition.match(/filename="?([^"]+)"?/i)
 			if (match && match[1]) {
