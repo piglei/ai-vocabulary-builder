@@ -2,9 +2,11 @@
 import 'bootstrap'
 import axios from 'axios'
 
-import { ref, onMounted, onUpdated, nextTick } from 'vue'
+import { ref, onMounted, onUpdated, nextTick, computed } from 'vue'
 import { DateTime } from 'luxon'
 import tippy from 'tippy.js';
+import { useVuelidate } from '@vuelidate/core'
+import { required, helpers } from '@vuelidate/validators'
 import LearnNav from '@/components/LearnNav.vue'
 import { playWord } from '@/common/basic'
 import { notyf } from '@/common/ui';
@@ -12,6 +14,35 @@ import { notyf } from '@/common/ui';
 
 const words = ref([])
 const count = ref(0)
+
+// Download anki deck state
+const now = DateTime.now()
+const defaultAnkiStart = now.minus({ days: 7 }).toISODate() || ''
+const defaultAnkiEnd = now.toISODate() || ''
+const ankiExportStartDate = ref(defaultAnkiStart)
+const ankiExportEndDate = ref(defaultAnkiEnd)
+const isDownloadingAnkiDeck = ref(false)
+const ankiDrawerCloseButton = ref<HTMLButtonElement | null>(null)
+
+// custom validator for anki export date range
+const endDateAfterStartDate = helpers.withMessage(
+	'End date must be after start date',
+	(value: string) => {
+		if (!ankiExportStartDate.value || !value) {
+			return true
+		}
+		const start = DateTime.fromISO(ankiExportStartDate.value)
+		const end = DateTime.fromISO(value)
+		return end >= start
+	}
+)
+
+const rules = computed(() => ({
+	ankiExportStartDate: { required },
+	ankiExportEndDate: { required, endDateAfterStartDate }
+}))
+
+const v$ = useVuelidate(rules, { ankiExportStartDate, ankiExportEndDate })
 
 onMounted(() => {
 	getWords()
@@ -83,6 +114,82 @@ function exportWords() {
 	window.open(window.API_ENDPOINT + '/api/word_samples/export/', '_blank')
 }
 
+// Close drawer helper
+function closeAnkiExportDrawer() {
+	if (ankiDrawerCloseButton.value) {
+		ankiDrawerCloseButton.value.click()
+	}
+}
+
+// Export words to Anki
+async function downloadAnkiDeck() {
+	const isFormValid = await v$.value.$validate()
+	if (!isFormValid) {
+		if (v$.value.ankiExportEndDate.endDateAfterStartDate.$invalid) {
+			notyf.error('End date must be after start date.')
+		} else {
+			notyf.error('Please select both start and end dates.')
+		}
+		return
+	}
+
+	isDownloadingAnkiDeck.value = true
+	try {
+		const resp = await axios.post(
+			window.API_ENDPOINT + '/api/word_samples/export/anki/',
+			{
+				start_date: ankiExportStartDate.value,
+				end_date: ankiExportEndDate.value
+			},
+			{
+				responseType: 'blob'
+			}
+		)
+
+		const blob = resp.data
+		const contentDisposition = resp.headers['content-disposition']
+
+		// Try to extract filename from headers, it not found, use default
+		let filename = 'ai_vov_words.anki.apkg'
+		if (contentDisposition) {
+			const match = contentDisposition.match(/filename="?([^"]+)"?/i)
+			if (match && match[1]) {
+				filename = match[1]
+			}
+		}
+
+		const url = window.URL.createObjectURL(blob)
+		const link = document.createElement('a')
+		link.href = url
+		link.download = filename
+		document.body.appendChild(link)
+		link.click()
+		document.body.removeChild(link)
+		window.URL.revokeObjectURL(url)
+		notyf.success('Your Anki deck download has started.')
+		closeAnkiExportDrawer()
+	} catch (error) {
+		// Parse the blob error message
+		let msg = 'Unknown error'
+		if (error.response && error.response.data instanceof Blob) {
+			try {
+				const text = await error.response.data.text()
+				const json = JSON.parse(text)
+				msg = json.message || text
+			} catch {
+				msg = 'Failed to parse error response'
+			}
+		} else if (error.response && error.response.data && error.response.data.message) {
+			msg = error.response.data.message
+		} else if (error.message) {
+			msg = error.message
+		}
+		notyf.error('Error exporting to Anki: ' + msg)
+	} finally {
+		isDownloadingAnkiDeck.value = false
+	}
+}
+
 </script>
 
 <template>
@@ -98,8 +205,13 @@ function exportWords() {
 					<div class="alert alert-info mt-3 mb-1">
 						<span>You've added <strong>{{ count }}</strong> words so far, keep going!</span>
 					</div>
-					<div class="d-flex justify-content-end mt-3 mb-2">
-						<button class="btn btn-sm btn-primary" @click="exportWords">Export (.csv)</button>
+					<div class="d-flex justify-content-end mt-3 mb-2 gap-2 flex-wrap">
+						<button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#ankiExportDrawer" aria-controls="ankiExportDrawer">
+							Export Anki Deck
+						</button>
+						<button class="btn btn-sm btn-outline-primary" type="button" @click="exportWords">
+							Export (.csv)
+						</button>
 					</div>
 					<table class="table table-striped words-list mt-3" v-if="words.length > 0">
 						<colgroup>
@@ -156,6 +268,37 @@ function exportWords() {
 					</table>
 				</div>
 				<div></div>
+			</div>
+		</div>
+		<div class="offcanvas offcanvas-end" tabindex="-1" id="ankiExportDrawer" aria-labelledby="ankiExportDrawerLabel">
+			<div class="offcanvas-header">
+				<h5 class="offcanvas-title" id="ankiExportDrawerLabel">Export Anki Deck</h5>
+				<button ref="ankiDrawerCloseButton" type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+			</div>
+			<div class="offcanvas-body">
+				<p class="text-secondary">
+					Select a date range to export the words you learned as an <a href="https://apps.ankiweb.net/" target="_blank">Anki</a> deck.
+				</p>
+				<div class="mb-3">
+					<label class="form-label" for="ankiStartDate">Start date</label>
+					<input id="ankiStartDate" class="form-control" type="date" v-model="ankiExportStartDate" @blur="v$.ankiExportStartDate.$touch()">
+				</div>
+				<div class="mb-3">
+					<label class="form-label" for="ankiEndDate">End date</label>
+					<input id="ankiEndDate" class="form-control" type="date" v-model="ankiExportEndDate" @blur="v$.ankiExportEndDate.$touch()">
+					<div class="form-text text-danger" v-if="v$.ankiExportEndDate.$error && v$.ankiExportEndDate.endDateAfterStartDate.$invalid">
+						{{ v$.ankiExportEndDate.endDateAfterStartDate.$message }}
+					</div>
+				</div>
+				<button
+					class="btn btn-primary w-100"
+					type="button"
+					:disabled="isDownloadingAnkiDeck || v$.$invalid"
+					@click="downloadAnkiDeck"
+				>
+					<span v-if="isDownloadingAnkiDeck" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+					Download Deck
+				</button>
 			</div>
 		</div>
 	</div>

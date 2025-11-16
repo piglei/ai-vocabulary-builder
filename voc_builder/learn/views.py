@@ -83,13 +83,17 @@ def export_words_as_anki(req: ExportAnkiInput):
         raise error_codes.VALIDATION_ERROR.f("No words found in the given date range")
 
     # Prepare the Anki deck file
-    deck_title = f"AI Vocabulary {start_date.strftime('%Y-%m-%d')} - {end_date.strftime('%Y-%m-%d')}"
+    deck_title = (
+        f"AI-Voc {start_date.strftime('%Y-%m-%d')} - {end_date.strftime('%Y-%m-%d')}"
+    )
     fp = BytesIO()
     AnkiDeckWriter().write(fp, words, deck_title)
     fp.seek(0)
 
     # Stream the response
-    filename = f"ai_vov_words_anki_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.apkg"
+    filename = (
+        f"ai_voc_anki_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.apkg"
+    )
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return StreamingResponse(fp, headers=headers, media_type="application/apkg")
 
