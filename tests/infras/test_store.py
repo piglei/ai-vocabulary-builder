@@ -1,3 +1,4 @@
+import datetime
 import importlib
 import os
 import time
@@ -72,10 +73,20 @@ class TestWordStore:
         items = word_store.list_latest(limit=10)
         # The items should starts from "word40"
         for i, word in enumerate(items):
-            assert word.word == f"word{i+40}"
+            assert word.word == f"word{i + 40}"
 
         # Test list all
         assert len(word_store.list_latest()) == 50
+
+    def test_list_by_date_range(self, tmp_path):
+        word_store = WordStore(tmp_path / "foo.json")
+        word_store.add(WordSample.make_empty("word"))
+
+        today = datetime.date.today()
+        assert len(word_store.list_by_date_range(today, today)) == 1
+
+        yesterday = today - datetime.timedelta(days=1)
+        assert len(word_store.list_by_date_range(yesterday, yesterday)) == 0
 
     def test_story_words(self, tmp_path):
         word_store = WordStore(tmp_path / "foo.json")

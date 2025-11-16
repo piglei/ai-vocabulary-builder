@@ -1,6 +1,6 @@
 import datetime
 import json
-from io import StringIO
+from io import BytesIO, StringIO
 from typing import AsyncGenerator, Dict, List, Literal
 
 from fastapi import APIRouter, Query, Response, status
@@ -10,13 +10,14 @@ from typing_extensions import Annotated
 
 from voc_builder.builder.models import WordSample
 from voc_builder.builder.serializers import WordSampleOutput
+from voc_builder.common.errors import error_codes
 from voc_builder.exceptions import AIServiceError
 from voc_builder.infras.ai import create_ai_model_config
 from voc_builder.infras.store import get_mastered_word_store, get_word_store
-from voc_builder.misc.export import VocCSVWriter
+from voc_builder.misc.export import AnkiDeckWriter, VocCSVWriter
 
 from .ai_svc import get_story
-from .serializers import DeleteMasteredWordsInput
+from .serializers import DeleteMasteredWordsInput, ExportAnkiInput
 
 router = APIRouter()
 
@@ -67,6 +68,30 @@ def export_words():
     filename = now.strftime("ai_vov_words_%Y%m%d_%H%M.csv")
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return StreamingResponse(fp, headers=headers)
+
+
+@router.post("/api/word_samples/export/anki/")
+def export_words_as_anki(req: ExportAnkiInput):
+    """Export word samples between the given time window into an Anki deck."""
+    start_date, end_date = req.start_date, req.end_date
+    if end_date < start_date:
+        raise error_codes.VALIDATION_ERROR.f("End date must be after start date")
+
+    word_store = get_word_store()
+    words = word_store.list_by_date_range(start_date, end_date)
+    if not words:
+        raise error_codes.VALIDATION_ERROR.f("No words found in the given date range")
+
+    # Prepare the Anki deck file
+    deck_title = f"AI Vocabulary {start_date.strftime('%Y-%m-%d')} - {end_date.strftime('%Y-%m-%d')}"
+    fp = BytesIO()
+    AnkiDeckWriter().write(fp, words, deck_title)
+    fp.seek(0)
+
+    # Stream the response
+    filename = f"ai_vov_words_anki_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.apkg"
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    return StreamingResponse(fp, headers=headers, media_type="application/apkg")
 
 
 @router.get("/api/mastered_words/")
