@@ -12,9 +12,9 @@ dependencies = ['click (>=8.0.0,<9.0.0)', 'rich (>=13.0.0,<14.0.0)', 'tinydb (>=
 aivoc = "voc_builder.main:main"
 
 [tool.poetry]
-version = "1.4.0"
+version = "1.4.1"
 packages = [{ include = "voc_builder", from = "." }]
-include = [{ path = "voc_builder/notepad/dist/**/*" }]
+include = [{ path = "voc_builder/notepad/dist/**/*", format = ["sdist", "wheel"] }]
 
 
 [[tool.poetry.source]]
