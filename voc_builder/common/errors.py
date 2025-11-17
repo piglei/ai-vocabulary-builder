@@ -9,6 +9,9 @@ from .web.std_err import APIError, ErrorCode
 class ErrorCodes:
     """Error codes for the API"""
 
+    # A common code for validation errors
+    VALIDATION_ERROR = ErrorCode("Validation error")
+
     AI_SERVICE_ERROR = ErrorCode("AI service error")
     WORD_ALREADY_EXISTS = ErrorCode("The word already exists")
     EXACTING_WORD_FAILED = ErrorCode("Failed to exact the word")

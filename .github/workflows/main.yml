@@ -47,6 +47,6 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v4
       - name: Install Nox
-        run:  uv pip install --system nox
+        run:  uv pip install --system "nox==2024.10.9"
       - name: Run tests on ${{ matrix.os }}
         run: nox --non-interactive --error-on-missing-interpreter --session "tests(python='${{ matrix.python-version }}')" -- --full-trace

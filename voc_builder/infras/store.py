@@ -175,6 +175,22 @@ class WordStore:
         else:
             return results
 
+    def list_by_date_range(
+        self, start_date: datetime.date, end_date: datetime.date
+    ) -> List[WordDetailedObj]:
+        """List words by date range.
+
+        :param start_date: The start date to filter words.
+        :param end_date: The end date to filter words.
+        :return: A list of detailed word objects.
+        """
+        results = []
+        for obj in self.list_latest():
+            dt = datetime.datetime.fromtimestamp(obj.ts_date_added).date()
+            if start_date <= dt <= end_date:
+                results.append(obj)
+        return results
+
     def filter(self, words: Set[str]) -> Set[str]:
         """Filter the given word list, return those exists in current db
 
