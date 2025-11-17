@@ -77,7 +77,7 @@ class TestDifferentWordQuerierJsonResult:
     @mock.patch("voc_builder.builder.ai_svc.JsonWordDefGetter.agent_request")
     async def test_json_valid_response(self, mocker, word_querier_invoker):
         querier_name, _invoker = word_querier_invoker
-        mocker.return_value = SimpleNamespace(data=VALID_JSON_REPLY)
+        mocker.return_value = SimpleNamespace(output=VALID_JSON_REPLY)
 
         word = await _invoker()
         # Check the prompt
@@ -101,7 +101,7 @@ class TestDifferentWordQuerierPydanticResult:
     @mock.patch("voc_builder.builder.ai_svc.PydanticWordDefGetter.agent_request")
     async def test_json_valid_response(self, mocker, word_querier_invoker):
         querier_name, _invoker = word_querier_invoker
-        mocker.return_value = SimpleNamespace(data=VALID_PYDANTIC_REPLY)
+        mocker.return_value = SimpleNamespace(output=VALID_PYDANTIC_REPLY)
 
         word = await _invoker()
         # Check the prompt
@@ -137,7 +137,7 @@ class TestJsonWordDefGetter:
     )
     @mock.patch("voc_builder.builder.ai_svc.JsonWordDefGetter.agent_request")
     async def test_valid_response(self, mocker, data):
-        mocker.return_value = SimpleNamespace(data=data)
+        mocker.return_value = SimpleNamespace(output=data)
         word = await JsonWordDefGetter().query(
             None, PromptText([], []), "Simplified Chinese"
         )
@@ -145,7 +145,7 @@ class TestJsonWordDefGetter:
 
     @mock.patch("voc_builder.builder.ai_svc.JsonWordDefGetter.agent_request")
     async def test_invalid_response(self, mocker):
-        mocker.return_value = SimpleNamespace(data="not a valid json")
+        mocker.return_value = SimpleNamespace(output="not a valid json")
 
         with pytest.raises(AIServiceError):
             await JsonWordDefGetter().query(

@@ -201,7 +201,7 @@ EXAMPLE JSON OUTPUT:
         prompt.system_lines.append(self.prompt_word_extra_reqs.format(language=language))
         prompt.system_lines.append(self.prompt_json_output)
         result = await self.agent_request(model, prompt)
-        item = self._parse_json_output(result.data)
+        item = self._parse_json_output(result.output)
         return self._to_word_choice(item)
 
     async def agent_request(self, model, prompt: PromptText) -> Any:
@@ -226,11 +226,13 @@ class PydanticWordDefGetter(BaseWordDefGetter):
         """Query the word using Pydantic mode."""
         prompt.system_lines.append(self.prompt_word_extra_reqs.format(language=language))
         result = await self.agent_request(model, prompt)
-        return self._to_word_choice(result.data)
+        return self._to_word_choice(result.output)
 
     async def agent_request(self, model, prompt: PromptText) -> Any:
         agent: Agent = Agent(
-            model, system_prompt=prompt.system, result_type=WordChoiceModelResp
+            model,
+            system_prompt=prompt.system,
+            output_type=WordChoiceModelResp,  # type: ignore
         )
         try:
             return await agent.run(prompt.user)

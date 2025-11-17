@@ -5,14 +5,14 @@ description = "An AI-powered smart vocabulary tool with features like One-click 
 dynamic = ["version", "classifiers"]
 readme = "README.md"
 authors = [{name = "piglei", email = "piglei2007@gmail.com"}]
-requires-python = '>=3.9,<4.0'
-dependencies = ['click (>=8.0.0,<9.0.0)', 'rich (>=13.0.0,<14.0.0)', 'tinydb (>=4.7.1,<5.0.0)', 'packaging (>=23.0,<24.0)', 'fastapi (>=0.115.6,<0.116.0)', 'uvicorn[standard] (>=0.22.0,<0.23.0)', 'sse-starlette (>=1.3.4,<2.0.0)', 'pydantic-ai (>=0.0.13,<0.0.14)', 'cattrs (>=24.1.2,<25.0.0)', 'requests (>=2.32.3,<3.0.0)', 'unearth (>=0.17.2,<0.18.0)', "genanki (>=0.13.1,<0.14.0)"]
+requires-python = '>=3.10,<4.0'
+dependencies = ['click (>=8.0.0,<9.0.0)', 'rich (>=13.0.0,<14.0.0)', 'tinydb (>=4.7.1,<5.0.0)', 'packaging (>=23.0,<24.0)', 'fastapi (>=0.115.6,<0.116.0)', "uvicorn (>=0.38.0,<0.39.0)", 'sse-starlette (>=1.3.4,<2.0.0)', "pydantic-ai (>=1.18.0,<2.0.0)", 'cattrs (>=24.1.2,<25.0.0)', 'requests (>=2.32.3,<3.0.0)', 'unearth (>=0.17.2,<0.18.0)', "genanki (>=0.13.1,<0.14.0)"]
 
 [project.scripts]
 aivoc = "voc_builder.main:main"
 
 [tool.poetry]
-version = "1.3.1"
+version = "1.4.0"
 packages = [{ include = "voc_builder", from = "." }]
 include = [{ path = "voc_builder/notepad/dist/**/*" }]
 
