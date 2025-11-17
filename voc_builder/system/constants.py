@@ -47,9 +47,9 @@ class TargetLanguage(Enum):
 
 # Available Gemini models
 GEMINI_MODELS = [
-    "gemini-2.5-flash",
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
+    "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
     "gemini-2.5-flash-lite-preview-09-2025",
     "gemini-2.5-flash-preview-09-2025",
@@ -60,7 +60,6 @@ GEMINI_MODELS = [
 
 # Available OpenAI models
 OPENAI_MODELS = [
-    "gpt-4o",
     "chatgpt-4o-latest",
     "codex-mini-latest",
     "computer-use-preview",
@@ -145,7 +144,6 @@ OPENAI_MODELS = [
 
 # Available Anthropic models
 ANTHROPIC_MODELS = [
-    "claude-sonnet-4-0",
     "claude-3-5-haiku-20241022",
     "claude-3-5-haiku-latest",
     "claude-3-5-sonnet-20240620",
@@ -163,6 +161,7 @@ ANTHROPIC_MODELS = [
     "claude-opus-4-0",
     "claude-opus-4-1-20250805",
     "claude-opus-4-20250514",
+    "claude-sonnet-4-0",
     "claude-sonnet-4-20250514",
     "claude-sonnet-4-5",
     "claude-sonnet-4-5-20250929",

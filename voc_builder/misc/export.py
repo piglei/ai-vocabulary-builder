@@ -1,6 +1,7 @@
 """Handle exporting related functions"""
 
 import csv
+import os
 import random
 import tempfile
 from typing import BinaryIO, Iterable, TextIO
@@ -139,8 +140,12 @@ class AnkiDeckWriter:
             deck.add_note(note)
 
         package = genanki.Package(deck)
-        with tempfile.NamedTemporaryFile(suffix=".apkg") as tmp_file:
-            package.write_to_file(tmp_file.name)
-            tmp_file.seek(0)
-            fp.write(tmp_file.read())
-            fp.seek(0)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = os.path.join(tmpdir, "deck.apkg")
+            # Write to a temporary file and then read back to the given fp
+            with open(tmp_path, "wb") as tmp_file:
+                package.write_to_file(tmp_file.name)
+            with open(tmp_path, "rb") as tmp_file:
+                tmp_file.seek(0)
+                fp.write(tmp_file.read())
+                fp.seek(0)
