@@ -146,9 +146,10 @@ const handleSubmit = async (event: Event) => {
 					</div>
 					<div class="mb-3">
 						<label for="openai_model" class="form-label">Model  <span class="text-danger">*</span></label>
-						<select name="openai_model" class="form-select" v-model="settings.openai_config.model">
+						<input list="openai_model_list" class="form-control" id="openai_model" name="openai_model" v-model="settings.openai_config.model" placeholder="Enter or select a model">
+						<datalist id="openai_model_list">
 							<option v-for="o of modelOptions.openai" :key="o" :value="o">{{ o }}</option>
-						</select>
+						</datalist>
 					</div>
 				</div>
 				
@@ -173,9 +174,10 @@ const handleSubmit = async (event: Event) => {
 					</div>
 					<div class="mb-3">
 						<label for="gemini_model" class="form-label">Model  <span class="text-danger">*</span></label>
-						<select name="gemini_model" class="form-select" v-model="settings.gemini_config.model">
+						<input list="gemini_model_list" class="form-control" id="gemini_model" name="gemini_model" v-model="settings.gemini_config.model" placeholder="Enter or select a model">
+						<datalist id="gemini_model_list">
 							<option v-for="o of modelOptions.gemini" :key="o" :value="o">{{ o }}</option>
-						</select>
+						</datalist>
 					</div>
 				</div>
 
@@ -197,9 +199,10 @@ const handleSubmit = async (event: Event) => {
 					</div>
 					<div class="mb-3">
 						<label for="anthropic_model" class="form-label">Model  <span class="text-danger">*</span></label>
-						<select name="anthropic_model" class="form-select" v-model="settings.anthropic_config.model">
+						<input list="anthropic_model_list" class="form-control" id="anthropic_model" name="anthropic_model" v-model="settings.anthropic_config.model" placeholder="Enter or select a model">
+						<datalist id="anthropic_model_list">
 							<option v-for="o of modelOptions.anthropic" :key="o" :value="o">{{ o }}</option>
-						</select>
+						</datalist>
 					</div>
 				</div>
 
@@ -224,9 +227,10 @@ const handleSubmit = async (event: Event) => {
 					</div>
 					<div class="mb-3">
 						<label for="deepseek_model" class="form-label">Model  <span class="text-danger">*</span></label>
-						<select name="deepseek_model" class="form-select" v-model="settings.deepseek_config.model">
+						<input list="deepseek_model_list" class="form-control" id="deepseek_model" name="deepseek_model" v-model="settings.deepseek_config.model" placeholder="Enter or select a model">
+						<datalist id="deepseek_model_list">
 							<option v-for="o of modelOptions.deepseek" :key="o" :value="o">{{ o }}</option>
-						</select>
+						</datalist>
 					</div>
 				</div>
 
