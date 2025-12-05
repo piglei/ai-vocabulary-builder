@@ -10,7 +10,7 @@ FROM python:3.10-slim AS builder
 RUN pip install poetry
 WORKDIR /app
 COPY pyproject.toml poetry.lock ./
-RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
+RUN poetry config virtualenvs.create false && poetry install --no-root --no-interaction --no-ansi
 COPY --from=frontend-builder /app/voc_frontend/dist ./voc_builder/notepad/dist
 COPY voc_builder ./voc_builder
 # ========================== Stage 3: Final Runtime Image ========================= #
