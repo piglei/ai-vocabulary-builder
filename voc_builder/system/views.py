@@ -7,14 +7,7 @@ from fastapi.responses import JSONResponse
 import voc_builder
 from voc_builder.infras.store import get_sys_settings_store, get_word_store
 from voc_builder.misc.version import get_new_version
-from voc_builder.system.constants import (
-    ANTHROPIC_MODELS,
-    DEEPSEEK_MODELS,
-    GEMINI_MODELS,
-    OPENAI_MODELS,
-    ModelProvider,
-    TargetLanguage,
-)
+from voc_builder.system.constants import ModelProvider, TargetLanguage
 from voc_builder.system.language import get_target_language
 from voc_builder.system.models import (
     AnthropicConfig,
@@ -23,11 +16,16 @@ from voc_builder.system.models import (
     OpenAIConfig,
     build_default_settings,
 )
+from voc_builder.system.services.options import (
+    ModelOptionsFetchError,
+    fetch_model_options,
+)
 
 from .serializers import (
     AnthropicConfigInput,
     DeepSeekConfigInput,
     GeminiConfigInput,
+    ModelOptionsInput,
     OpenAIConfigInput,
     SettingsInput,
 )
@@ -74,17 +72,27 @@ async def get_settings(response: Response):
     return JSONResponse(
         {
             "settings": cattrs.unstructure(settings),
-            "model_options": {
-                "gemini": GEMINI_MODELS,
-                "openai": OPENAI_MODELS,
-                "anthropic": ANTHROPIC_MODELS,
-                "deepseek": DEEPSEEK_MODELS,
-            },
             "target_language_options": [
                 cattrs.unstructure(lan.value) for lan in TargetLanguage
             ],
         }
     )
+
+
+@router.post("/api/settings/model-options")
+def get_model_options(input_data: ModelOptionsInput):
+    """Fetch available models from the selected provider."""
+    try:
+        models = fetch_model_options(
+            input_data.provider, input_data.api_key, str(input_data.api_host)
+        )
+    except ModelOptionsFetchError as exc:
+        return JSONResponse(
+            status_code=400,
+            content={"message": str(exc)},
+        )
+
+    return JSONResponse({"models": models})
 
 
 @router.post("/api/settings")

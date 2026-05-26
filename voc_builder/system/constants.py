@@ -43,31 +43,3 @@ class TargetLanguage(Enum):
             if language.value.code == code:
                 return language
         return None
-
-
-# Available Gemini models (recommended options)
-GEMINI_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-]
-
-# Available OpenAI models (recommended options)
-OPENAI_MODELS = [
-    "gpt-4o",
-    "gpt-4o-mini",
-    "o1-mini",
-]
-
-# Available Anthropic models (recommended options)
-ANTHROPIC_MODELS = [
-    "claude-3-5-sonnet-latest",
-    "claude-3-7-sonnet-latest",
-    "claude-3-5-haiku-latest",
-]
-
-# Available DeepSeek models (recommended options)
-DEEPSEEK_MODELS = [
-    "deepseek-chat",
-    "deepseek-reasoner",
-]
