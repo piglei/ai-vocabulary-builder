@@ -19,6 +19,7 @@
     "axios": "^1.4.0",
     "bootstrap": "^5.2.3",
     "bootstrap-icons": "^1.10.5",
+    "choices.js": "^11.2.3",
     "jquery": "^3.6.4",
     "luxon": "^3.3.0",
     "notyf": "^3.10.0",

@@ -36,6 +36,23 @@ class SettingsInput(BaseModel):
         return value
 
 
+class ModelOptionsInput(BaseModel):
+    """The input data for fetching provider model options."""
+
+    provider: str
+    api_key: str = Field(..., min_length=1)
+    api_host: Union[AnyHttpUrl, Literal[""]]
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, value):
+        try:
+            ModelProvider(value)
+        except ValueError:
+            raise ValueError("invalid model provider")
+        return value
+
+
 class OpenAIConfigInput(BaseModel):
     api_key: str = Field(..., min_length=1)
     api_host: Union[AnyHttpUrl, Literal[""]]
